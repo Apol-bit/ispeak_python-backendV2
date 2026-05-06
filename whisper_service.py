@@ -120,11 +120,11 @@ def generate_full_analysis(file_path: str, model) -> Dict[str, Any]:
     # ---------- LOAD AUDIO ----------
     y, sr = librosa.load(file_path, sr=16000, mono=True)
 
-    # Check for silence in audio recordings
+    # ---------- SILENCE GATE ----------
     rms = float(np.sqrt(np.mean(y ** 2)))
-    SILENCE_RMS_THRESHOLD = 1e-3
+    logger.info("Audio RMS value: %f", rms)  # log RMS so we can tune threshold
 
-    if rms < SILENCE_RMS_THRESHOLD:
+    if rms < 1e-4:  # lowered from 1e-3 to be less aggressive
         return {
             "transcription": "",
             "scores": {
@@ -146,6 +146,10 @@ def generate_full_analysis(file_path: str, model) -> Dict[str, Any]:
                 "message": "No speech detected",
             },
         }
+
+    # ---------- NORMALIZE LOUDNESS ----------
+    if rms > 0:
+        y = y * (0.05 / rms)
 
     # ---------- TRANSCRIBE ----------
     transcription = model.transcribe(file_path, word_timestamps=True)
@@ -180,47 +184,46 @@ def generate_full_analysis(file_path: str, model) -> Dict[str, Any]:
     pronunciation_stats = analyze_pronunciation(word_segments)
     pronunciation_score = float(pronunciation_stats.get("pronunciation_score", 0))
 
-
     # ---------- FILLER ----------
     filler_stats = analyze_fillers(word_segments)
     filler_score = float(filler_stats.get("filler_score", 100))
 
     # ---------- CLARITY ----------
     clarity_score = round(
-    pronunciation_score * 0.60 +
-    filler_score        * 0.40
-)
+        pronunciation_score * 0.60 +
+        filler_score        * 0.40
+    )
 
     # ---------- OVERALL ----------
     overall_score = _compute_overall_score(pacing_score, clarity_score, energy_score)
 
     # ---------- RESULT ----------
     return {
-    "transcription": text,
-    "scores": {
-        "overall":    overall_score,
-        "clarity":    clarity_score,
-        "pacing":     pacing_score,
-        "energy":     energy_score,
-    },
-    "pronunciation": {
-        "score":             pronunciation_score,
-        "message":           pronunciation_stats.get("message", ""),
-        "problematic_words": [
-            {
-                "word":       w["word"],
-                "confidence": w["confidence"],
-                "duration":   float(w["duration"]),
-                "issue":      w["issue"],
-            }
-            for w in pronunciation_stats.get("problematic_words", [])
-        ],
-    },
-    "fillers": {
-        "score":   filler_score,
-        "count":   filler_stats.get("filler_count", 0),
-        "rate":    filler_stats.get("filler_rate", 0.0),
-        "words":   filler_stats.get("filler_words", []),
-        "message": filler_stats.get("message", ""),
-    },
-}
+        "transcription": text,
+        "scores": {
+            "overall":    overall_score,
+            "clarity":    clarity_score,
+            "pacing":     pacing_score,
+            "energy":     energy_score,
+        },
+        "pronunciation": {
+            "score":             pronunciation_score,
+            "message":           pronunciation_stats.get("message", ""),
+            "problematic_words": [
+                {
+                    "word":       w["word"],
+                    "confidence": w["confidence"],
+                    "duration":   float(w["duration"]),
+                    "issue":      w["issue"],
+                }
+                for w in pronunciation_stats.get("problematic_words", [])
+            ],
+        },
+        "fillers": {
+            "score":   filler_score,
+            "count":   filler_stats.get("filler_count", 0),
+            "rate":    filler_stats.get("filler_rate", 0.0),
+            "words":   filler_stats.get("filler_words", []),
+            "message": filler_stats.get("message", ""),
+        },
+    }
