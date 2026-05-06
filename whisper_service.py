@@ -1,5 +1,7 @@
+#whisper_service.py
 from __future__ import annotations
 
+import numpy as np
 import logging
 import librosa
 from typing import Any, Dict, List
@@ -35,6 +37,9 @@ def _compute_pacing_score(pacing_stats: Dict[str, Any]) -> float:
     """
     status = pacing_stats.get("pacing_status", "")
     wpm = pacing_stats.get("wpm", 0.0)
+
+    if status in ("No speech detected", "Insufficient speech", "Analysis failed"):
+        return 0.0
 
     if status == "Excellent pacing":
         return 100.0
@@ -115,6 +120,33 @@ def generate_full_analysis(file_path: str, model) -> Dict[str, Any]:
     # ---------- LOAD AUDIO ----------
     y, sr = librosa.load(file_path, sr=16000, mono=True)
 
+    # Check for silence in audio recordings
+    rms = float(np.sqrt(np.mean(y ** 2)))
+    SILENCE_RMS_THRESHOLD = 1e-3
+
+    if rms < SILENCE_RMS_THRESHOLD:
+        return {
+            "transcription": "",
+            "scores": {
+                "overall": 0,
+                "clarity": 0,
+                "pacing": 0,
+                "energy": 0,
+            },
+            "pronunciation": {
+                "score": 0,
+                "message": "No speech detected",
+                "problematic_words": [],
+            },
+            "fillers": {
+                "score": 0,
+                "count": 0,
+                "rate": 0.0,
+                "words": [],
+                "message": "No speech detected",
+            },
+        }
+
     # ---------- TRANSCRIBE ----------
     transcription = model.transcribe(file_path, word_timestamps=True)
 
@@ -184,11 +216,11 @@ def generate_full_analysis(file_path: str, model) -> Dict[str, Any]:
             for w in pronunciation_stats.get("problematic_words", [])
         ],
     },
-    #"fillers": {
-    #    "score":   filler_score,
-    #    "count":   filler_stats.get("filler_count", 0),
-    #    "rate":    filler_stats.get("filler_rate", 0.0),
-    #    "words":   filler_stats.get("filler_words", []),
-    #    "message": filler_stats.get("message", ""),
-    #},
+    "fillers": {
+        "score":   filler_score,
+        "count":   filler_stats.get("filler_count", 0),
+        "rate":    filler_stats.get("filler_rate", 0.0),
+        "words":   filler_stats.get("filler_words", []),
+        "message": filler_stats.get("message", ""),
+    },
 }

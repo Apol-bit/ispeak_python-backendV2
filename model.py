@@ -1,14 +1,12 @@
-# model.py
-"""import whisper
-
-def load_model(model_name: str = "base"):
-    return whisper.load_model(model_name)"""
-    
-
+import importlib
 import os
 import librosa
 from transformers import pipeline, WhisperProcessor
-from optimum.onnxruntime import ORTModelForSpeechSeq2Seq
+
+try:
+    ORTModelForSpeechSeq2Seq = importlib.import_module("optimum.onnxruntime").ORTModelForSpeechSeq2Seq
+except (ImportError, ModuleNotFoundError):
+    ORTModelForSpeechSeq2Seq = None
 
 class OptimizedONNXWhisper:
     def __init__(self, model_path: str):

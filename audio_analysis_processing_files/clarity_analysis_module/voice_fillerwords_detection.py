@@ -48,7 +48,7 @@ def analyze_fillers(
             "filler_count": 0,
             "filler_rate": 0.0,
             "filler_words": [],
-            "filler_score": 100,
+            "filler_score": 0,      
             "message": "No speech detected",
         }
 
@@ -63,7 +63,7 @@ def analyze_fillers(
             "filler_count": 0,
             "filler_rate": 0.0,
             "filler_words": [],
-            "filler_score": 100,
+            "filler_score": 0,       
             "message": "Analysis failed",
         }
 
