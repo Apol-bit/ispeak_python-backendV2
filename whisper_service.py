@@ -15,11 +15,11 @@ logger = logging.getLogger(__name__)
 
 # Minimum RMS to treat audio as containing real speech.
 # 1e-4 was far too low — background noise easily exceeds it.
-RMS_SILENCE_THRESHOLD = 0.01
+RMS_SILENCE_THRESHOLD = 0.04
 
 # Minimum real words required after transcription.
 # Guards against Whisper hallucinating text on noise.
-MIN_WORD_COUNT = 3
+MIN_WORD_COUNT = 5
 
 _SILENCE_RESPONSE = {
     "transcription": "",
@@ -28,6 +28,10 @@ _SILENCE_RESPONSE = {
         "clarity": 0,
         "pacing": 0,
         "energy": 0,
+    },
+    "pacing": {
+        "wpm": 0.0,
+        "message": "No speech detected"
     },
     "pronunciation": {
         "score": 0,
@@ -189,13 +193,7 @@ def generate_full_analysis(file_path: str, model) -> Dict[str, Any]:
         return dict(_SILENCE_RESPONSE)
 
     # ---------- AUDIO DURATION ----------
-    audio_duration = transcription.get("duration")
-    if not audio_duration:
-        audio_duration = librosa.get_duration(y=y, sr=sr)
-        logger.warning(
-            "Duration missing from Whisper result — "
-            "falling back to librosa: %.2fs", audio_duration
-        )
+    audio_duration = librosa.get_duration(y=y, sr=sr)
 
     # ---------- ENERGY ----------
     energy_stats = analyze_energy(y, sr)
@@ -235,6 +233,10 @@ def generate_full_analysis(file_path: str, model) -> Dict[str, Any]:
             "clarity":    clarity_score,
             "pacing":     pacing_score,
             "energy":     energy_score,
+        },
+        "pacing": {
+            "wpm": pacing_stats.get("wpm", 0.0) if isinstance(pacing_stats, dict) else 0.0,
+            "message": pacing_stats.get("pacing_status", "") if isinstance(pacing_stats, dict) else "Analysis failed"
         },
         "pronunciation": {
             "score":             pronunciation_score,
