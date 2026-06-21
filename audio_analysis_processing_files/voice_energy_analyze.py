@@ -6,11 +6,11 @@ from typing import Dict, List  # type hints
 
 # ---------------- CONFIG ----------------
 
-WHISPER_THRESHOLD_DB = -30.0  # below this = whispering
-SHOUT_THRESHOLD_DB = -7.0  # above this = shouting
+WHISPER_THRESHOLD_DB = -35.0  # below this = whispering
+SHOUT_THRESHOLD_DB = -10.0  # above this = shouting
 
-LOW_VARIATION_DB = 10.0  # variation < 6 dB → speech is flat / dull
-MONOTONE_PITCH_STD_THRESHOLD = 35.0  # pitch std < 20 Hz → monotone
+LOW_VARIATION_DB = 10.0  # variation < 10 dB → speech is flat / dull
+MONOTONE_PITCH_STD_THRESHOLD = 25.0  # pitch std < 25 Hz → monotone
 
 MIN_ACTIVE_RATIO = 0.10  # at least 10% of frames must be non-silent
 MIN_FRAMES_FOR_ROBUST_PERCENTILE = 50  # min frames for stable percentile calc
@@ -18,11 +18,10 @@ MIN_FRAMES_FOR_ROBUST_PERCENTILE = 50  # min frames for stable percentile calc
 DEFAULT_FRAME_LENGTH = 1024  # frame size for analysis
 DEFAULT_HOP_LENGTH = 256  # step size between frames
 
-# Raised from 1e-4: background noise RMS easily clears the old value.
-# This must be consistent with RMS_SILENCE_THRESHOLD in whisper_service.py.
-# Note: analyze_energy receives the *normalized* signal (scaled to RMS ~0.05),
-# so this threshold is expressed in normalized amplitude units.
-FRAME_SILENCE_THRESHOLD = 0.02
+# Frame-level silence threshold for per-frame RMS checks.
+# analyze_energy now receives the ORIGINAL (unnormalized) signal,
+# so this threshold must work for raw audio levels from real devices.
+FRAME_SILENCE_THRESHOLD = 0.005
 
 
 # ---------------- GLOBAL ANALYSIS ----------------

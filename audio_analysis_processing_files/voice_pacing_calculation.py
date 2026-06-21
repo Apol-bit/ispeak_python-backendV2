@@ -9,8 +9,8 @@ logger = logging.getLogger(__name__)  # create logger
 def calculate_pacing(
     whisper_segments: List[Dict],  # list of speech segments
     audio_duration_seconds: float,  # total audio length
-    slow_speech: int = 110,  # slow speech threshold (WPM)
-    fast_speech: int = 160,  # fast speech threshold (WPM)
+    slow_speech: int = 120,  # slow speech threshold (WPM)
+    fast_speech: int = 150,  # fast speech threshold (WPM)
     pause_threshold: float = 1.0,  # minimum pause to count
     timing_jitter: float = 0.15,  # tolerance to ignore tiny gaps
 ) -> Dict:
@@ -19,8 +19,8 @@ def calculate_pacing(
         raise ValueError("Invalid audio duration")  # prevent division errors
 
     # ---> NEW: Minimum audio length check for pacing <---
-    # You cannot accurately judge someone's "pace" in less than 5 seconds.
-    if audio_duration_seconds < 5.0:
+    # You cannot accurately judge someone's "pace" in less than 2 seconds.
+    if audio_duration_seconds < 2.0:
         logger.info("Audio too short for accurate pacing calculation.")
         return {
             "wpm": 0.0,
