@@ -48,13 +48,9 @@ from whisper_service import (
     RMS_SILENCE_THRESHOLD,
     MIN_WORD_COUNT,
 )
-from audio_analysis_processing_files.voice_energy_analyze import analyze_energy
-from audio_analysis_processing_files.voice_pacing_calculation import calculate_pacing
-from audio_analysis_processing_files.clarity_analysis_module.voice_clarity_detection import (
-    analyze_pronunciation,
-)
-from audio_analysis_processing_files.clarity_analysis_module.voice_fillerwords_detection import (
-    analyze_fillers,
+from audio_analysis_processing_files.vocal_variety import (
+    analyze_frequency_pitch,
+    analyze_signal_intensity,
 )
 
 # ---------------------------------------------------------------------------
@@ -149,7 +145,19 @@ def _quick_evaluate(file_path: str) -> Dict[str, Any]:
             "message": "Audio below silence threshold -- no speech detected.",
         }
 
-    energy_stats = analyze_energy(y, sr)
+    intensity_stats = analyze_signal_intensity(y, sr)
+    frequency_stats = analyze_frequency_pitch(y, sr)
+    energy_stats = {
+        "average_volume_db": intensity_stats["average_volume_db"],
+        "dynamic_range": intensity_stats["dynamic_range_db"],
+        "loudness_status": intensity_stats["loudness_status"],
+        "is_low_variation": intensity_stats["is_low_intensity_variation"],
+        "pitch_variation_hz": frequency_stats["pitch_variation_hz"],
+        "pitch_variety_score": frequency_stats.get("pitch_variety_score"),
+        "is_monotone": frequency_stats["is_monotone"],
+        "signal_intensity": intensity_stats,
+        "frequency_pitch": frequency_stats,
+    }
     energy_score = _compute_energy_score(energy_stats)
 
     return {
@@ -213,7 +221,9 @@ def _print_report(result: Dict[str, Any]):
         print(f"      Volume   : {energy.get('average_volume_db', 'N/A')} dB")
         print(f"      Loudness : {energy.get('loudness_status', 'N/A')}")
         print(f"      Range    : {energy.get('dynamic_range', 'N/A')} dB")
-        print(f"      Monotone : {'Yes' if energy.get('is_monotone') else 'No'}")
+        monotone = energy.get("is_monotone")
+        monotone_text = "N/A" if monotone is None else ("Yes" if monotone else "No")
+        print(f"      Monotone : {monotone_text}")
         print(f"\n    {DIM}{result['note']}{RESET}")
         return
 
@@ -263,7 +273,13 @@ def _print_report(result: Dict[str, Any]):
         if problems:
             print(f"      Issues   : {len(problems)} word(s)")
             for pw in problems[:10]:  # show top 10
-                print(f"        - {pw['word']:<15} conf={pw['confidence']:.2f}  dur={pw['duration']:.2f}s  ({pw['issue']})")
+                confidence = pw.get("confidence")
+                confidence_text = f"conf={confidence:.2f}  " if isinstance(confidence, (int, float)) else ""
+                duration = float(pw.get("duration", 0.0))
+                print(
+                    f"        - {pw.get('word', ''):<15} {confidence_text}"
+                    f"dur={duration:.2f}s  ({pw.get('issue', '')})"
+                )
             if len(problems) > 10:
                 print(f"        ... and {len(problems) - 10} more")
 

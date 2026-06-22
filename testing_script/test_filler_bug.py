@@ -1,10 +1,11 @@
+import os
 import sys
 import json
 
 # Setup path
-sys.path.append('d:/iSpeak_Thesis_Project/ispeak_python-backend')
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from audio_analysis_processing_files.clarity_analysis_module.voice_fillerwords_detection import analyze_fillers
+from audio_analysis_processing_files.filler_words import analyze_fillers
 
 # Dummy Whisper segments containing fillers
 segments = [

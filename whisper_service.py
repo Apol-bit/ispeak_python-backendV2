@@ -4,12 +4,20 @@ from __future__ import annotations
 import numpy as np
 import logging
 import librosa
+from difflib import SequenceMatcher
 from typing import Any, Dict, List
 
-from audio_analysis_processing_files.voice_energy_analyze import analyze_energy
-from audio_analysis_processing_files.voice_pacing_calculation import calculate_pacing
-from audio_analysis_processing_files.clarity_analysis_module.voice_clarity_detection import analyze_pronunciation
-from audio_analysis_processing_files.clarity_analysis_module.voice_fillerwords_detection import analyze_fillers
+from audio_analysis_processing_files.articulation import (
+    analyze_articulation,
+    compare_reference_enunciation,
+)
+from audio_analysis_processing_files.filler_words import analyze_fillers
+from audio_analysis_processing_files.speaking_rate import analyze_speaking_rate
+from audio_analysis_processing_files.vocal_variety import (
+    analyze_frequency_pitch,
+    analyze_signal_intensity,
+    analyze_temporal_pauses,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +37,10 @@ _SILENCE_RESPONSE = {
         "clarity": 0,
         "pacing": 0,
         "energy": 0,
+        "vocal_variety": 0,
+        "articulation": 0,
+        "speaking_rate": 0,
+        "filler_words": 100,
     },
     "pacing": {
         "wpm": 0.0,
@@ -46,6 +58,18 @@ _SILENCE_RESPONSE = {
         "words": [],
         "message": "No speech detected",
     },
+    "vocal_variety": {
+        "score": 0,
+        "signal_intensity": {},
+        "frequency_pitch": {},
+        "temporal_pauses": {},
+    },
+    "articulation": {
+        "score": 0,
+        "accurate_pronunciation": {},
+        "clear_enunciation": {},
+        "message": "No speech detected",
+    },
 }
 
 
@@ -56,7 +80,7 @@ def _extract_word_segments(segments: List[Dict[str, Any]]) -> List[Dict[str, Any
             "text": word.get("word", ""),
             "start": word.get("start"),
             "end": word.get("end"),
-            "confidence": word.get("probability", 0.0),
+            "confidence": word.get("probability"),
         }
         for seg in segments
         for word in seg.get("words", [])
@@ -132,6 +156,14 @@ def _compute_energy_score(energy_stats: Dict[str, Any]) -> float:
 
     if energy_stats.get("is_monotone"):
         score -= 20.0
+    elif isinstance(energy_stats.get("pitch_variety_score"), (int, float)):
+        if energy_stats["pitch_variety_score"] < 50:
+            score -= 10.0
+
+    score = max(0.0, score)
+    pause_score = energy_stats.get("temporal_pauses", {}).get("pause_score")
+    if isinstance(pause_score, (int, float)):
+        score = score * 0.80 + float(pause_score) * 0.20
 
     return round(max(0.0, score), 1)
 
@@ -212,8 +244,8 @@ def _run_analysis(file_path: str, y: np.ndarray, sr: int, model) -> Dict[str, An
     # Log each word for debugging filler detection
     logger.info("=== WORD SEGMENTS (%d words) ===", len(word_segments))
     for i, ws in enumerate(word_segments):
-        logger.info("  [%d] '%s' (%.2f-%.2f, conf=%.3f)",
-                    i, ws.get('text','').strip(), ws.get('start',0), ws.get('end',0), ws.get('confidence',0))
+        logger.info("  [%d] '%s' (%.2f-%.2f, conf=%s)",
+                    i, ws.get('text','').strip(), ws.get('start',0), ws.get('end',0), ws.get('confidence'))
 
     # ---------- WORD TIMESTAMPS (for Teleprompter UI) ----------
     word_timestamps = _extract_word_timestamps(segments)
@@ -223,12 +255,27 @@ def _run_analysis(file_path: str, y: np.ndarray, sr: int, model) -> Dict[str, An
 
     # ---------- ENERGY ----------
     # Use ORIGINAL audio — normalization flattens loudness, making score always 100
-    energy_stats = analyze_energy(y_original, sr)
+    intensity_stats = analyze_signal_intensity(y_original, sr)
+    frequency_stats = analyze_frequency_pitch(y_original, sr)
+    pause_stats = analyze_temporal_pauses(word_segments)
+    energy_stats = {
+        "average_volume_db": intensity_stats.get("average_volume_db", -80.0),
+        "dynamic_range": intensity_stats.get("dynamic_range_db", 0.0),
+        "loudness_status": intensity_stats.get("loudness_status", "Silence"),
+        "is_low_variation": intensity_stats.get("is_low_intensity_variation", True),
+        "pitch_variation_hz": frequency_stats.get("pitch_variation_hz", 0.0),
+        "pitch_variety_score": frequency_stats.get("pitch_variety_score"),
+        "is_monotone": frequency_stats.get("is_monotone", True),
+        "signal_intensity": intensity_stats,
+        "frequency_pitch": frequency_stats,
+        "temporal_pauses": pause_stats,
+    }
     energy_score = _compute_energy_score(energy_stats)
 
     # ---------- PACING ----------
     try:
-        pacing_stats = calculate_pacing(segments, audio_duration)
+        pacing_stats = analyze_speaking_rate(word_segments, audio_duration)
+        pacing_stats["total_pause_seconds"] = pause_stats["total_pause_seconds"]
         pacing_score = _compute_pacing_score(pacing_stats)
     except ValueError as e:
         logger.error("Pacing analysis failed: %s", e)
@@ -236,18 +283,26 @@ def _run_analysis(file_path: str, y: np.ndarray, sr: int, model) -> Dict[str, An
         pacing_score = 0.0
 
     # ---------- PRONUNCIATION ----------
-    pronunciation_stats = analyze_pronunciation(word_segments)
-    pronunciation_score = float(pronunciation_stats.get("pronunciation_score", 0))
+    articulation_stats = analyze_articulation(word_segments, y=y_original, sr=sr)
+    pronunciation_score = float(articulation_stats.get("articulation_score", 0))
 
     # ---------- FILLER ----------
     filler_stats = analyze_fillers(word_segments)
-    filler_score = float(filler_stats.get("filler_score", 100))
+    raw_filler_score = filler_stats.get("filler_score")
+    filler_score = (
+        float(raw_filler_score)
+        if isinstance(raw_filler_score, (int, float)) else None
+    )
 
     # ---------- CLARITY ----------
-    clarity_score = round(
-        pronunciation_score * 0.60 +
-        filler_score        * 0.40
-    )
+    if filler_score is None:
+        # Do not reward or punish the speaker when the local classifier is absent.
+        clarity_score = round(pronunciation_score)
+    else:
+        clarity_score = round(
+            pronunciation_score * 0.60 +
+            filler_score        * 0.40
+        )
 
     # ---------- OVERALL ----------
     overall_score = _compute_overall_score(pacing_score, clarity_score, energy_score)
@@ -260,26 +315,43 @@ def _run_analysis(file_path: str, y: np.ndarray, sr: int, model) -> Dict[str, An
             "clarity":    clarity_score,
             "pacing":     pacing_score,
             "energy":     energy_score,
+            "vocal_variety": energy_score,
+            "articulation": pronunciation_score,
+            "speaking_rate": pacing_score,
+            "filler_words": filler_score,
         },
         "pacing": {
             "wpm": pacing_stats.get("wpm", 0.0) if isinstance(pacing_stats, dict) else 0.0,
             "message": pacing_stats.get("pacing_status", "") if isinstance(pacing_stats, dict) else "Analysis failed"
         },
+        "speaking_rate": {
+            "score": pacing_score,
+            "wpm": pacing_stats.get("wpm", 0.0) if isinstance(pacing_stats, dict) else 0.0,
+            "articulation_rate": pacing_stats.get("articulation_rate", 0.0) if isinstance(pacing_stats, dict) else 0.0,
+            "message": pacing_stats.get("pacing_status", "") if isinstance(pacing_stats, dict) else "Analysis failed",
+        },
         "pronunciation": {
             "score":             pronunciation_score,
-            "message":           pronunciation_stats.get("message", ""),
-            "problematic_words": [
-                {
-                    "word":       w["word"],
-                    "confidence": w["confidence"],
-                    "duration":   float(w["duration"]),
-                    "issue":      w["issue"],
-                }
-                for w in pronunciation_stats.get("problematic_words", [])
-            ],
+            "message":           articulation_stats.get("message", ""),
+            "problematic_words": articulation_stats.get("clear_enunciation", {}).get(
+                "unclear_words", []
+            ),
+        },
+        "articulation": {
+            "score": pronunciation_score,
+            "message": articulation_stats.get("message", ""),
+            "accurate_pronunciation": articulation_stats.get("accurate_pronunciation", {}),
+            "clear_enunciation": articulation_stats.get("clear_enunciation", {}),
+        },
+        "vocal_variety": {
+            "score": energy_score,
+            "signal_intensity": intensity_stats,
+            "frequency_pitch": frequency_stats,
+            "temporal_pauses": pause_stats,
         },
         "fillers": {
             "score":   filler_score,
+            "analysis_available": filler_stats.get("analysis_available", False),
             "count":   filler_stats.get("filler_count", 0),
             "rate":    filler_stats.get("filler_rate", 0.0),
             "words":   [
@@ -290,7 +362,9 @@ def _run_analysis(file_path: str, y: np.ndarray, sr: int, model) -> Dict[str, An
                 }
                 for fw in filler_stats.get("filler_words", [])
             ],
+            "candidates": filler_stats.get("filler_candidates", []),
             "message": filler_stats.get("message", ""),
+            "method": filler_stats.get("method", ""),
         },
         # Internal — used by reference comparison
         "_internal": {
@@ -299,6 +373,8 @@ def _run_analysis(file_path: str, y: np.ndarray, sr: int, model) -> Dict[str, An
             "pacing_score": pacing_score,
             "clarity_score": clarity_score,
             "energy_score": energy_score,
+            "articulation_stats": articulation_stats,
+            "filler_score": filler_score,
         },
     }
 
@@ -392,8 +468,55 @@ def generate_reference_analysis(
     # If user is monotone but reference isn't, that's bad — penalty already applied
     ref_energy_score = round(ref_energy_score, 1)
 
-    # ---------- CLARITY stays the same (pronunciation is absolute, not relative) ----------
-    ref_clarity_score = user_internal["clarity_score"]
+    # ---------- REFERENCE-BASED ENUNCIATION ----------
+    enunciation_comparison = compare_reference_enunciation(y_user, y_ref, sr)
+    transcript_similarity = SequenceMatcher(
+        None,
+        ref_result.get("transcription", "").lower().split(),
+        user_result.get("transcription", "").lower().split(),
+    ).ratio()
+    enunciation_comparison["transcript_similarity"] = round(transcript_similarity, 3)
+
+    user_articulation = user_internal["articulation_stats"]
+    base_enunciation = float(
+        user_articulation.get("clear_enunciation", {}).get("enunciation_score", 0)
+    )
+    if enunciation_comparison.get("available") and transcript_similarity >= 0.60:
+        reference_score = float(enunciation_comparison["score"])
+        adjusted_enunciation = round(base_enunciation * 0.40 + reference_score * 0.60, 1)
+        enunciation_comparison["applied"] = True
+    else:
+        adjusted_enunciation = base_enunciation
+        enunciation_comparison["applied"] = False
+        if transcript_similarity < 0.60:
+            enunciation_comparison["message"] = (
+                "Reference comparison not applied because transcripts differ"
+            )
+
+    accuracy_score = user_articulation.get("accurate_pronunciation", {}).get(
+        "pronunciation_accuracy_score"
+    )
+    if isinstance(accuracy_score, (int, float)):
+        adjusted_articulation = round(float(accuracy_score) * 0.60 + adjusted_enunciation * 0.40, 1)
+    else:
+        adjusted_articulation = adjusted_enunciation
+
+    filler_score = user_internal.get("filler_score")
+    if isinstance(filler_score, (int, float)):
+        ref_clarity_score = round(adjusted_articulation * 0.60 + float(filler_score) * 0.40)
+    else:
+        ref_clarity_score = round(adjusted_articulation)
+
+    user_result["articulation"]["score"] = adjusted_articulation
+    user_result["articulation"]["clear_enunciation"][
+        "enunciation_score"
+    ] = adjusted_enunciation
+    user_result["articulation"]["clear_enunciation"][
+        "reference_comparison"
+    ] = enunciation_comparison
+    user_result["pronunciation"]["score"] = adjusted_articulation
+    user_result["scores"]["articulation"] = adjusted_articulation
+    user_result["scores"]["clarity"] = ref_clarity_score
 
     # ---------- RECALCULATE OVERALL ----------
     ref_overall = _compute_overall_score(ref_pacing_score, ref_clarity_score, ref_energy_score)
@@ -401,6 +524,10 @@ def generate_reference_analysis(
     # ---------- UPDATE USER RESULT ----------
     user_result["scores"]["pacing"] = ref_pacing_score
     user_result["scores"]["energy"] = ref_energy_score
+    user_result["scores"]["speaking_rate"] = ref_pacing_score
+    user_result["scores"]["vocal_variety"] = ref_energy_score
+    user_result["speaking_rate"]["score"] = ref_pacing_score
+    user_result["vocal_variety"]["score"] = ref_energy_score
     user_result["scores"]["overall"] = ref_overall
 
     # Clean up internal data

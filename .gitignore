@@ -1,4 +1,4 @@
-models/
+.venv/
 venv/
 __pycache__/
 temp_audio_folder/

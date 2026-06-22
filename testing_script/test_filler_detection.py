@@ -3,7 +3,7 @@ import sys, os
 import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from audio_analysis_processing_files.clarity_analysis_module.voice_fillerwords_detection import analyze_fillers
+from audio_analysis_processing_files.filler_words import analyze_fillers
 
 SR = 16000
 
@@ -24,7 +24,7 @@ def make_silence(duration):
     return np.zeros(int(duration * SR), dtype=np.float32)
 
 
-def test(name, segments, y):
+def run_case(name, segments, y):
     r = analyze_fillers(segments, y=y, sr=SR)
     print(f"=== {name} ===")
     print(f"  Count: {r['filler_count']}, Rate: {r['filler_rate']}%, Score: {r['filler_score']}")
@@ -48,7 +48,7 @@ segs1 = [
     {"text": "to",   "start": 1.4, "end": 1.7, "confidence": 1.0},
     {"text": "school","start": 1.7, "end": 2.4, "confidence": 1.0},
 ]
-test("Speech with monotone filler gap", segs1, y1)
+run_case("Speech with monotone filler gap", segs1, y1)
 
 # Test 2: All speech, no fillers
 y2 = make_speech(3.0)
@@ -57,7 +57,7 @@ segs2 = [
     {"text": "weather", "start": 1.0, "end": 2.0, "confidence": 1.0},
     {"text": "today",   "start": 2.0, "end": 3.0, "confidence": 1.0},
 ]
-test("All speech, no fillers", segs2, y2)
+run_case("All speech, no fillers", segs2, y2)
 
 # Test 3: Multiple fillers
 y3 = np.concatenate([
@@ -72,9 +72,9 @@ segs3 = [
     {"text": "went",  "start": 0.8,  "end": 1.3,  "confidence": 1.0},
     {"text": "there", "start": 1.65, "end": 2.15, "confidence": 1.0},
 ]
-test("Multiple monotone fillers", segs3, y3)
+run_case("Multiple monotone fillers", segs3, y3)
 
 # Test 4: Empty
-test("No speech", [], make_silence(1.0))
+run_case("No speech", [], make_silence(1.0))
 
 print("All tests done!")
