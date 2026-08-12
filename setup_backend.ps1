@@ -1,4 +1,7 @@
-param([switch]$SkipInstall)
+param(
+    [switch]$SkipInstall,
+    [switch]$DownloadBaseModel
+)
 
 $ErrorActionPreference = 'Stop'
 $ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -9,7 +12,17 @@ Set-Location -LiteralPath $ProjectRoot
 
 if (-not (Test-Path -LiteralPath $Python)) {
     Write-Host 'Creating project-local .venv...'
-    py -3.13 -m venv (Join-Path $ProjectRoot '.venv')
+    $PyLauncher = Get-Command py -ErrorAction SilentlyContinue
+    if ($PyLauncher) {
+        & $PyLauncher.Source -3.13 -m venv (Join-Path $ProjectRoot '.venv')
+    }
+    else {
+        $SystemPython = Get-Command python -ErrorAction SilentlyContinue
+        if (-not $SystemPython) {
+            throw 'Python 3.13 was not found. Install Python before running setup.'
+        }
+        & $SystemPython.Source -m venv (Join-Path $ProjectRoot '.venv')
+    }
 }
 
 if (-not $SkipInstall) {
@@ -24,6 +37,11 @@ if (-not $SkipInstall) {
     finally {
         Remove-Item -LiteralPath $PortableRequirements -Force -ErrorAction SilentlyContinue
     }
+}
+
+if ($DownloadBaseModel) {
+    Write-Host 'Downloading the openai/whisper-small base model for iSpeak_v4...'
+    & $Python (Join-Path $ProjectRoot 'download_base_model.py')
 }
 
 & $Python (Join-Path $ProjectRoot 'check_setup.py')

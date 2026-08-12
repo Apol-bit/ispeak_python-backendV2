@@ -13,7 +13,7 @@ from whisper_service import _compute_pacing_score
 def test_pacing_analysis():
     audio_path = r"C:\Users\ALLAN\AppData\Local\Temp\myapp_uploads\Recording.m4a"
 
-    model = load_model("base")
+    model = load_model()
     y, sr = librosa.load(audio_path, sr=16000, mono=True)
     transcription = model.transcribe(audio_path, word_timestamps=True, language="en")
 

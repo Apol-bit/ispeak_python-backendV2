@@ -1,4 +1,21 @@
+# Virtual environments
 .venv/
 venv/
+
+# Python cache
 __pycache__/
+*.pyc
+
+# Temp audio
 temp_audio_folder/
+
+# Large model binaries (too big for GitHub, download separately)
+*.safetensors
+*.bin
+*.pt
+*.onnx
+models/**/base_model/
+models/**/.cache/
+
+# IDE
+.vscode/

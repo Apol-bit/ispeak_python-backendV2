@@ -133,6 +133,7 @@ def _print_score_line(label: str, score: float, extra: str = ""):
 def _quick_evaluate(file_path: str) -> Dict[str, Any]:
     """Run energy analysis only (no model required)."""
     y, sr = librosa.load(file_path, sr=16000, mono=True)
+    sr = int(sr)
     duration = librosa.get_duration(y=y, sr=sr)
 
     rms = float(np.sqrt(np.mean(y ** 2)))
@@ -405,8 +406,13 @@ def main():
     )
     parser.add_argument(
         "--model",
-        default="models/iSpeak_v3/model_files",
-        help="Path to the ONNX model directory (default: models/iSpeak_v3/model_files).",
+        default=None,
+        help="Path to the iSpeak_v4 adapter directory (default: models/iSpeak_v4).",
+    )
+    parser.add_argument(
+        "--base-model",
+        default=None,
+        help="Path to the local Whisper base model (default: models/iSpeak_v4/base_model).",
     )
     args = parser.parse_args()
 
@@ -420,10 +426,10 @@ def main():
     # Load model (unless quick mode)
     model = None
     if not args.quick:
-        logger.info("Loading ONNX model from %s ...", args.model)
+        logger.info("Loading iSpeak_v4 model...")
         t0 = time.perf_counter()
         from model import load_model
-        model = load_model(args.model)
+        model = load_model(args.model, args.base_model)
         logger.info("Model loaded in %.1fs", time.perf_counter() - t0)
 
     # Process each file

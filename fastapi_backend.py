@@ -67,12 +67,16 @@ def _require_upload(value: Any, field_name: str) -> Any:
 @app.get("/health")
 async def health() -> dict[str, Any]:
     speech_ready = app.state.model is not None
+    model = app.state.model
     filler_status = filler_classifier_status()
     return {
         "status": "ready" if speech_ready else "degraded",
         "speech_model": {
             "available": speech_ready,
             "error": app.state.model_error,
+            "name": getattr(model, "model_name", "iSpeak_v4"),
+            "adapter_path": str(getattr(model, "adapter_path", "")) or None,
+            "base_model_path": str(getattr(model, "base_model_path", "")) or None,
         },
         "filler_classifier": filler_status,
     }

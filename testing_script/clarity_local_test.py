@@ -11,7 +11,7 @@ from audio_analysis_processing_files.articulation import analyze_articulation
 def test_clarity_analysis():
     audio_path = r"C:\Users\ALLAN\AppData\Local\Temp\myapp_uploads\Recording.m4a"
 
-    model = load_model("base")
+    model = load_model()
     transcription = model.transcribe(audio_path, word_timestamps=True, language="en")
     
     word_segments: List[Dict[str, Any]] = [

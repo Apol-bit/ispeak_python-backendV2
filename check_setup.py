@@ -6,8 +6,13 @@ import argparse
 import importlib.util
 from pathlib import Path
 
-from audio_analysis_processing_files.filler_words import filler_classifier_status
-from model import DEFAULT_SPEECH_MODEL_PATH, ModelUnavailableError, resolve_model_path
+from model import (
+    DEFAULT_BASE_MODEL_PATH,
+    DEFAULT_SPEECH_MODEL_PATH,
+    ModelUnavailableError,
+    declared_base_model_id,
+    resolve_model_paths,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 REQUIRED_IMPORTS = {
@@ -16,9 +21,9 @@ REQUIRED_IMPORTS = {
     "multipart": "python-multipart",
     "librosa": "librosa",
     "numpy": "numpy",
-    "onnxruntime": "onnxruntime",
+    "torch": "torch",
     "transformers": "transformers",
-    "optimum.onnxruntime": "optimum-onnx",
+    "peft": "peft",
 }
 
 
@@ -39,21 +44,41 @@ def main() -> int:
         if not _module_available(module)
     ]
     try:
-        speech_path = resolve_model_path(DEFAULT_SPEECH_MODEL_PATH)
-        speech = {"available": True, "path": str(speech_path), "error": None}
+        adapter_path, base_path = resolve_model_paths()
+        speech = {
+            "available": True,
+            "adapter_path": str(adapter_path),
+            "base_path": str(base_path),
+            "base_model_id": declared_base_model_id(adapter_path),
+            "error": None,
+        }
     except ModelUnavailableError as exc:
         speech = {
             "available": False,
-            "path": str(DEFAULT_SPEECH_MODEL_PATH),
+            "adapter_path": str(DEFAULT_SPEECH_MODEL_PATH),
+            "base_path": str(DEFAULT_BASE_MODEL_PATH),
+            "base_model_id": None,
             "error": str(exc),
         }
-    filler = filler_classifier_status()
+    try:
+        from audio_analysis_processing_files.filler_words import filler_classifier_status
+
+        filler = filler_classifier_status()
+    except (ImportError, ModuleNotFoundError) as exc:
+        filler = {
+            "available": False,
+            "path": str(PROJECT_ROOT / "models" / "filler_classifier"),
+            "error": f"Dependency unavailable: {exc}",
+        }
 
     print("iSpeak backend readiness")
     print(f"  Project folder     : {PROJECT_ROOT}")
     print(f"  Python dependencies: {'ready' if not missing_packages else 'missing ' + ', '.join(missing_packages)}")
-    print(f"  Speech model       : {'ready' if speech['available'] else 'missing/incomplete'}")
-    print(f"    {speech['path']}")
+    print(f"  iSpeak_v4 model    : {'ready' if speech['available'] else 'missing/incomplete'}")
+    print(f"    Adapter: {speech['adapter_path']}")
+    print(f"    Base   : {speech['base_path']}")
+    if speech["base_model_id"]:
+        print(f"    Declared base model: {speech['base_model_id']}")
     if speech["error"]:
         print(f"    {speech['error']}")
     print(f"  Filler classifier  : {'ready' if filler['available'] else 'missing/incomplete (optional)'}")

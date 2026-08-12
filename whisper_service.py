@@ -46,6 +46,12 @@ _SILENCE_RESPONSE = {
         "wpm": 0.0,
         "message": "No speech detected"
     },
+    "speaking_rate": {
+        "score": 0,
+        "wpm": 0.0,
+        "articulation_rate": 0.0,
+        "message": "No speech detected",
+    },
     "pronunciation": {
         "score": 0,
         "message": "No speech detected",
@@ -53,10 +59,13 @@ _SILENCE_RESPONSE = {
     },
     "fillers": {
         "score": 100,
+        "analysis_available": True,
         "count": 0,
         "rate": 0.0,
         "words": [],
+        "candidates": [],
         "message": "No speech detected",
+        "method": "local token-classification model only",
     },
     "vocal_variety": {
         "score": 0,
@@ -215,7 +224,8 @@ def _run_analysis(file_path: str, y: np.ndarray, sr: int, model) -> Dict[str, An
     # condition_on_previous_text=False prevents Whisper from using its own
     # previous output to suppress filler words in later segments.
     transcription = model.transcribe(
-        file_path, 
+        file_path,
+        audio_data=y_original,
         word_timestamps=True,
         initial_prompt="Umm, uh, hmm, like, you know, ah, er, um, ano, parang, yung, basically, actually.",
         condition_on_previous_text=False,
@@ -391,6 +401,7 @@ def generate_full_analysis(file_path: str, model) -> Dict[str, Any]:
 
     # ---------- LOAD AUDIO ----------
     y, sr = librosa.load(file_path, sr=16000, mono=True)
+    sr = int(sr)
 
     result = _run_analysis(file_path, y, sr, model)
 
@@ -423,6 +434,8 @@ def generate_reference_analysis(
     # ---------- LOAD BOTH AUDIO FILES ----------
     y_user, sr = librosa.load(user_path, sr=16000, mono=True)
     y_ref, sr_ref = librosa.load(reference_path, sr=16000, mono=True)
+    sr = int(sr)
+    sr_ref = int(sr_ref)
 
     # ---------- ANALYZE BOTH ----------
     logger.info("Analyzing reference audio...")
@@ -440,7 +453,7 @@ def generate_reference_analysis(
     user_internal = user_result["_internal"]
 
     # ---------- REFERENCE-BASED PACING SCORE ----------
-    # Compare user WPM against reference WPM (instead of fixed 110-160 range)
+    # Compare user WPM against reference WPM (instead of the fixed 120-150 range)
     ref_wpm = ref_internal["pacing_stats"].get("wpm", 130.0) if isinstance(ref_internal["pacing_stats"], dict) else 130.0
     user_wpm = user_internal["pacing_stats"].get("wpm", 0.0) if isinstance(user_internal["pacing_stats"], dict) else 0.0
 

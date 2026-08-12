@@ -1,20 +1,18 @@
 # Team setup
 
-Install Python 3.13 and Git LFS first. After cloning, retrieve any model weights
-that the team has committed through LFS:
+Install Python 3.13. The `models/iSpeak_v4` directory contains the local PEFT
+adapter. Its declared base model is `openai/whisper-small` and must be stored at
+`models/iSpeak_v4/base_model` for offline runtime use.
+
+From PowerShell in this repository, create the environment, install dependencies,
+and explicitly download the base model once:
 
 ```powershell
-git lfs install
-git lfs pull
+powershell -ExecutionPolicy Bypass -File .\setup_backend.ps1 -DownloadBaseModel
 ```
 
-Then, from PowerShell in this repository:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\setup_backend.ps1
-```
-
-Copy the local models into the folders documented under `models/`, then start:
+Later setup runs can omit `-DownloadBaseModel`. Backend startup never downloads
+model files. Start it with:
 
 ```powershell
 .\start_backend.ps1
