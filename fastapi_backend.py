@@ -12,12 +12,23 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
+from fastapi.middleware.cors import CORSMiddleware
 
 from audio_analysis_processing_files.filler_words import filler_classifier_status
 from model import ModelUnavailableError, load_model
 from whisper_service import generate_full_analysis, generate_reference_analysis
 
 ALLOWED_EXTENSIONS = {".wav", ".mp3", ".m4a", ".flac", ".ogg", ".aac"}
+
+# Environment-based configuration
+HOST = os.getenv("ISPEAK_HOST", "127.0.0.1")
+PORT = int(os.getenv("ISPEAK_PORT", "8000"))
+
+# CORS: comma-separated origins, or "*" for development
+_cors_env = os.getenv("ISPEAK_CORS_ORIGINS", "*").strip()
+CORS_ORIGINS: list[str] = (
+    ["*"] if _cors_env == "*" else [o.strip() for o in _cors_env.split(",") if o.strip()]
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -42,6 +53,14 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="iSpeak Speech Analysis Backend", lifespan=lifespan)
 app.state.model = None
 app.state.model_error = "Application lifespan has not started"
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 def _validate_extension(filename: str | None) -> str:
