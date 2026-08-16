@@ -19,6 +19,8 @@ from model import ModelUnavailableError, load_model
 from whisper_service import generate_full_analysis, generate_reference_analysis
 
 ALLOWED_EXTENSIONS = {".wav", ".mp3", ".m4a", ".flac", ".ogg", ".aac"}
+MAX_UPLOAD_MB = int(os.getenv("ISPEAK_MAX_UPLOAD_MB", "25"))
+MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
 
 # Environment-based configuration
 HOST = os.getenv("ISPEAK_HOST", "127.0.0.1")
@@ -83,6 +85,23 @@ def _require_upload(value: Any, field_name: str) -> Any:
     return value
 
 
+def _copy_with_limit(source, dest, max_bytes: int = MAX_UPLOAD_BYTES) -> int:
+    """Copy from source to dest in chunks, raising 413 if max_bytes is exceeded."""
+    total = 0
+    while True:
+        chunk = source.read(64 * 1024)  # 64KB chunks
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > max_bytes:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File too large. Maximum upload size is {MAX_UPLOAD_MB}MB.",
+            )
+        dest.write(chunk)
+    return total
+
+
 @app.get("/health")
 async def health() -> dict[str, Any]:
     speech_ready = app.state.model is not None
@@ -133,12 +152,12 @@ async def transcribe(request: Request):
     try:
         with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as temp:
             temp_path = temp.name
-            shutil.copyfileobj(file.file, temp)
+            _copy_with_limit(file.file, temp)
 
         if reference_audio is not None:
             with tempfile.NamedTemporaryFile(suffix=ref_suffix, delete=False) as ref_temp:
                 ref_temp_path = ref_temp.name
-                shutil.copyfileobj(reference_audio.file, ref_temp)
+                _copy_with_limit(reference_audio.file, ref_temp)
 
         if ref_temp_path:
             result = await run_in_threadpool(
