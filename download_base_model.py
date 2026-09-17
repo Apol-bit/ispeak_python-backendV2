@@ -1,21 +1,23 @@
-"""Explicitly download the iSpeak_v4 Whisper base model for offline runtime use."""
+"""Explicitly download the selected iSpeak adapter's base model for offline use."""
 
 from __future__ import annotations
 
 from model import (
-    DEFAULT_BASE_MODEL_PATH,
-    DEFAULT_SPEECH_MODEL_PATH,
     ModelUnavailableError,
+    configured_base_model_path,
     declared_base_model_id,
+    resolve_adapter_path,
     resolve_base_model_path,
 )
 
 
 def main() -> int:
-    model_id = declared_base_model_id(DEFAULT_SPEECH_MODEL_PATH)
+    adapter_path = resolve_adapter_path()
+    base_model_path = configured_base_model_path(adapter_path=adapter_path)
+    model_id = declared_base_model_id(adapter_path)
 
     try:
-        existing = resolve_base_model_path(DEFAULT_BASE_MODEL_PATH)
+        existing = resolve_base_model_path(base_model_path)
         print(f"Base model is already available: {existing}")
         return 0
     except ModelUnavailableError:
@@ -28,11 +30,11 @@ def main() -> int:
             "huggingface_hub is unavailable. Run setup_backend.ps1 first."
         ) from exc
 
-    DEFAULT_BASE_MODEL_PATH.mkdir(parents=True, exist_ok=True)
-    print(f"Downloading {model_id} to {DEFAULT_BASE_MODEL_PATH}...")
+    base_model_path.mkdir(parents=True, exist_ok=True)
+    print(f"Downloading {model_id} to {base_model_path}...")
     snapshot_download(
         repo_id=model_id,
-        local_dir=DEFAULT_BASE_MODEL_PATH,
+        local_dir=base_model_path,
         allow_patterns=[
             "config.json",
             "generation_config.json",
@@ -41,7 +43,7 @@ def main() -> int:
             "model-*.safetensors",
         ],
     )
-    resolved = resolve_base_model_path(DEFAULT_BASE_MODEL_PATH)
+    resolved = resolve_base_model_path(base_model_path)
     print(f"Base model ready: {resolved}")
     return 0
 

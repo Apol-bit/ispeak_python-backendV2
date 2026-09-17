@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import asyncio
 import shutil
 import tempfile
 import traceback
@@ -15,7 +16,7 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 
 from audio_analysis_processing_files.filler_words import filler_classifier_status
-from model import ModelUnavailableError, load_model
+from model import DEFAULT_MODEL_NAME, ModelUnavailableError, load_model
 from whisper_service import generate_full_analysis, generate_reference_analysis
 
 ALLOWED_EXTENSIONS = {".wav", ".mp3", ".m4a", ".flac", ".ogg", ".aac"}
@@ -25,12 +26,19 @@ MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
 # Environment-based configuration
 HOST = os.getenv("ISPEAK_HOST", "127.0.0.1")
 PORT = int(os.getenv("ISPEAK_PORT", "8000"))
+MAX_CONCURRENT_INFERENCES = max(1, int(os.getenv("ISPEAK_MAX_CONCURRENT_INFERENCES", "1")))
+QUEUE_TIMEOUT_SECONDS = max(1, int(os.getenv("ISPEAK_QUEUE_TIMEOUT_SECONDS", "30")))
+IS_PRODUCTION = os.getenv("ISPEAK_ENV", "development").lower() == "production"
 
 # CORS: comma-separated origins, or "*" for development
 _cors_env = os.getenv("ISPEAK_CORS_ORIGINS", "*").strip()
 CORS_ORIGINS: list[str] = (
     ["*"] if _cors_env == "*" else [o.strip() for o in _cors_env.split(",") if o.strip()]
 )
+if IS_PRODUCTION and CORS_ORIGINS == ["*"]:
+    raise RuntimeError("ISPEAK_CORS_ORIGINS must be explicit in production")
+
+inference_semaphore = asyncio.Semaphore(MAX_CONCURRENT_INFERENCES)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -59,9 +67,9 @@ app.state.model_error = "Application lifespan has not started"
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_credentials=CORS_ORIGINS != ["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
 )
 
 
@@ -74,6 +82,23 @@ def _validate_extension(filename: str | None) -> str:
     if suffix not in ALLOWED_EXTENSIONS:
         raise HTTPException(status_code=400, detail="Unsupported file type")
     return suffix
+
+
+def _validate_media_signature(file_path: str, suffix: str) -> None:
+    with open(file_path, "rb") as media:
+        header = media.read(16)
+    valid = {
+        ".wav": header.startswith(b"RIFF") and header[8:12] == b"WAVE",
+        ".flac": header.startswith(b"fLaC"),
+        ".ogg": header.startswith(b"OggS"),
+        ".mp3": header.startswith(b"ID3") or (
+            len(header) >= 2 and header[0] == 0xFF and header[1] & 0xE0 == 0xE0
+        ),
+        ".m4a": len(header) >= 8 and header[4:8] == b"ftyp",
+        ".aac": len(header) >= 2 and header[0] == 0xFF and header[1] & 0xF0 == 0xF0,
+    }.get(suffix, False)
+    if not valid:
+        raise HTTPException(status_code=400, detail="File content does not match its audio extension")
 
 
 def _require_upload(value: Any, field_name: str) -> Any:
@@ -112,7 +137,7 @@ async def health() -> dict[str, Any]:
         "speech_model": {
             "available": speech_ready,
             "error": app.state.model_error,
-            "name": getattr(model, "model_name", "iSpeak_v4"),
+            "name": getattr(model, "model_name", DEFAULT_MODEL_NAME),
             "adapter_path": str(getattr(model, "adapter_path", "")) or None,
             "base_model_path": str(getattr(model, "base_model_path", "")) or None,
         },
@@ -141,6 +166,9 @@ async def transcribe(request: Request):
 
     file = _require_upload(form.get("file"), "file")
     reference_audio = form.get("reference_audio")
+    language = str(form.get("language") or "English")
+    if language not in {"English", "Filipino", "Taglish"}:
+        raise HTTPException(status_code=400, detail="Unsupported language")
     if reference_audio is not None:
         reference_audio = _require_upload(reference_audio, "reference_audio")
 
@@ -153,25 +181,39 @@ async def transcribe(request: Request):
         with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as temp:
             temp_path = temp.name
             _copy_with_limit(file.file, temp)
+        _validate_media_signature(temp_path, suffix)
 
         if reference_audio is not None:
             with tempfile.NamedTemporaryFile(suffix=ref_suffix, delete=False) as ref_temp:
                 ref_temp_path = ref_temp.name
                 _copy_with_limit(reference_audio.file, ref_temp)
+            _validate_media_signature(ref_temp_path, ref_suffix)
 
-        if ref_temp_path:
-            result = await run_in_threadpool(
-                generate_reference_analysis,
-                temp_path,
-                ref_temp_path,
-                app.state.model,
-            )
-        else:
-            result = await run_in_threadpool(
-                generate_full_analysis,
-                temp_path,
-                app.state.model,
-            )
+        try:
+            await asyncio.wait_for(inference_semaphore.acquire(), QUEUE_TIMEOUT_SECONDS)
+        except TimeoutError as exc:
+            raise HTTPException(
+                status_code=503,
+                detail="Speech analysis is busy. Please try again shortly.",
+            ) from exc
+        try:
+            if ref_temp_path:
+                result = await run_in_threadpool(
+                    generate_reference_analysis,
+                    temp_path,
+                    ref_temp_path,
+                    app.state.model,
+                    language,
+                )
+            else:
+                result = await run_in_threadpool(
+                    generate_full_analysis,
+                    temp_path,
+                    app.state.model,
+                    language,
+                )
+        finally:
+            inference_semaphore.release()
         return result
     except HTTPException:
         raise
@@ -179,7 +221,7 @@ async def transcribe(request: Request):
         logger.error("Processing failed for %s:\n%s", file.filename, traceback.format_exc())
         raise HTTPException(
             status_code=500,
-            detail=f"Audio processing failed: {exc}",
+            detail="Audio processing failed",
         ) from exc
     finally:
         for path in (temp_path, ref_temp_path):

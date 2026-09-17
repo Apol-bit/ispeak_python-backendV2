@@ -407,12 +407,18 @@ def main():
     parser.add_argument(
         "--model",
         default=None,
-        help="Path to the iSpeak_v4 adapter directory (default: models/iSpeak_v4).",
+        help=(
+            "Path to an iSpeak adapter directory "
+            "(default: models/iSpeak_v5 or ISPEAK_MODEL_PATH)."
+        ),
     )
     parser.add_argument(
         "--base-model",
         default=None,
-        help="Path to the local Whisper base model (default: models/iSpeak_v4/base_model).",
+        help=(
+            "Path to the local Whisper base model "
+            "(default: models/iSpeak_v5/base_model or ISPEAK_BASE_MODEL_PATH)."
+        ),
     )
     args = parser.parse_args()
 
@@ -426,7 +432,7 @@ def main():
     # Load model (unless quick mode)
     model = None
     if not args.quick:
-        logger.info("Loading iSpeak_v4 model...")
+        logger.info("Loading configured iSpeak model...")
         t0 = time.perf_counter()
         from model import load_model
         model = load_model(args.model, args.base_model)

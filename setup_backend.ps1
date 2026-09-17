@@ -40,7 +40,7 @@ if (-not $SkipInstall) {
 }
 
 if ($DownloadBaseModel) {
-    Write-Host 'Downloading the openai/whisper-small base model for iSpeak_v4...'
+    Write-Host 'Downloading the configured iSpeak adapter base model...'
     & $Python (Join-Path $ProjectRoot 'download_base_model.py')
 }
 

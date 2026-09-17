@@ -1,15 +1,19 @@
-"""Project-local iSpeak_v4 Whisper adapter loading."""
+"""Project-local iSpeak Whisper PEFT adapter loading."""
 
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
-DEFAULT_SPEECH_MODEL_PATH = PROJECT_ROOT / "models" / "iSpeak_v4"
+DEFAULT_MODEL_NAME = "iSpeak_v5"
+DEFAULT_SPEECH_MODEL_PATH = PROJECT_ROOT / "models" / DEFAULT_MODEL_NAME
 DEFAULT_BASE_MODEL_PATH = DEFAULT_SPEECH_MODEL_PATH / "base_model"
+MODEL_PATH_ENV = "ISPEAK_MODEL_PATH"
+BASE_MODEL_PATH_ENV = "ISPEAK_BASE_MODEL_PATH"
 
 _ADAPTER_FILES = (
     "adapter_config.json",
@@ -23,6 +27,35 @@ _ADAPTER_FILES = (
 
 class ModelUnavailableError(RuntimeError):
     """Raised when required local model files or runtime packages are absent."""
+
+
+def configured_adapter_path(model_path: str | Path | None = None) -> Path:
+    """Return the configured adapter path without requiring it to exist."""
+    configured = model_path
+    if configured is None:
+        configured = os.getenv(MODEL_PATH_ENV, "").strip() or DEFAULT_SPEECH_MODEL_PATH
+    candidate = Path(configured).expanduser()
+    return candidate if candidate.is_absolute() else PROJECT_ROOT / candidate
+
+
+def configured_base_model_path(
+    base_model_path: str | Path | None = None,
+    *,
+    adapter_path: str | Path | None = None,
+) -> Path:
+    """Return the configured base path, preferring a base bundled with the adapter."""
+    configured = base_model_path
+    if configured is None:
+        configured = os.getenv(BASE_MODEL_PATH_ENV, "").strip() or None
+    if configured is not None:
+        candidate = Path(configured).expanduser()
+        return candidate if candidate.is_absolute() else PROJECT_ROOT / candidate
+
+    if adapter_path is not None:
+        bundled_base = Path(adapter_path) / "base_model"
+        if bundled_base.is_dir():
+            return bundled_base
+    return DEFAULT_BASE_MODEL_PATH
 
 
 def _resolve_directory(path: str | Path, label: str) -> Path:
@@ -39,15 +72,15 @@ def _resolve_directory(path: str | Path, label: str) -> Path:
 
 
 def resolve_adapter_path(model_path: str | Path | None = None) -> Path:
-    """Resolve and validate the local iSpeak_v4 PEFT adapter directory."""
+    """Resolve and validate the configured local iSpeak PEFT adapter directory."""
     resolved = _resolve_directory(
-        model_path or DEFAULT_SPEECH_MODEL_PATH,
-        "iSpeak_v4 adapter",
+        configured_adapter_path(model_path),
+        "iSpeak adapter",
     )
     missing = [name for name in _ADAPTER_FILES if not (resolved / name).is_file()]
     if missing:
         raise ModelUnavailableError(
-            f"iSpeak_v4 adapter directory is incomplete: {resolved} "
+            f"{resolved.name} adapter directory is incomplete: {resolved} "
             f"(missing: {', '.join(missing)})"
         )
     return resolved
@@ -66,10 +99,14 @@ def _has_base_weights(path: Path) -> bool:
     )
 
 
-def resolve_base_model_path(base_model_path: str | Path | None = None) -> Path:
-    """Resolve the project-local Whisper base model required by iSpeak_v4."""
+def resolve_base_model_path(
+    base_model_path: str | Path | None = None,
+    *,
+    adapter_path: str | Path | None = None,
+) -> Path:
+    """Resolve the local Whisper base model required by the selected adapter."""
     resolved = _resolve_directory(
-        base_model_path or DEFAULT_BASE_MODEL_PATH,
+        configured_base_model_path(base_model_path, adapter_path=adapter_path),
         "Whisper base model",
     )
     if not (resolved / "config.json").is_file() or not _has_base_weights(resolved):
@@ -89,12 +126,13 @@ def declared_base_model_id(model_path: str | Path | None = None) -> str:
         )
     except (OSError, json.JSONDecodeError) as exc:
         raise ModelUnavailableError(
-            f"Could not read iSpeak_v4 adapter metadata: {exc}"
+            f"Could not read {adapter_path.name} adapter metadata: {exc}"
         ) from exc
     base_model_id = config.get("base_model_name_or_path")
     if not isinstance(base_model_id, str) or not base_model_id.strip():
         raise ModelUnavailableError(
-            "iSpeak_v4 adapter_config.json does not declare base_model_name_or_path"
+            f"{adapter_path.name} adapter_config.json does not declare "
+            "base_model_name_or_path"
         )
     return base_model_id.strip()
 
@@ -104,20 +142,18 @@ def resolve_model_paths(
     base_model_path: str | Path | None = None,
 ) -> tuple[Path, Path]:
     adapter_path = resolve_adapter_path(model_path)
-    base_path = resolve_base_model_path(base_model_path)
+    base_path = resolve_base_model_path(base_model_path, adapter_path=adapter_path)
     declared_base_model_id(adapter_path)
     return adapter_path, base_path
 
 
 def resolve_model_path(model_path: str | Path | None = None) -> Path:
-    """Backward-compatible alias that resolves the iSpeak_v4 adapter path."""
+    """Backward-compatible alias that resolves the selected adapter path."""
     return resolve_adapter_path(model_path)
 
 
-class ISpeakV4Whisper:
-    """Whisper-small with the local iSpeak_v4 LoRA adapter merged for inference."""
-
-    model_name = "iSpeak_v4"
+class ISpeakWhisper:
+    """Whisper with the selected local iSpeak LoRA adapter merged for inference."""
 
     def __init__(
         self,
@@ -128,6 +164,7 @@ class ISpeakV4Whisper:
             model_path,
             base_model_path,
         )
+        self.model_name = self.adapter_path.name
         self.base_model_id = declared_base_model_id(self.adapter_path)
 
         try:
@@ -140,7 +177,8 @@ class ISpeakV4Whisper:
             )
         except (ImportError, ModuleNotFoundError, AttributeError) as exc:
             raise ModelUnavailableError(
-                "Missing iSpeak_v4 runtime dependencies. Run setup_backend.ps1 first."
+                f"Missing {self.model_name} runtime dependencies. "
+                "Run setup_backend.ps1 first."
             ) from exc
 
         use_cuda = torch.cuda.is_available()
@@ -180,23 +218,40 @@ class ISpeakV4Whisper:
             )
         except Exception as exc:
             raise ModelUnavailableError(
-                f"Could not load local iSpeak_v4 model: {exc}"
+                f"Could not load local {self.model_name} model: {exc}"
             ) from exc
 
-        print("iSpeak_v4 loaded and ready.")
+        print(f"{self.model_name} loaded and ready.")
 
     def transcribe(
         self,
         file_path: str,
         *,
         audio_data: Any | None = None,
+        initial_prompt: str | None = None,
+        language: str | None = None,
+        condition_on_previous_text: bool = False,
         **_: Any,
     ) -> dict[str, Any]:
         pipeline_input: Any = audio_data if audio_data is not None else file_path
+        generate_kwargs: dict[str, Any] = {
+            "task": "transcribe",
+            "condition_on_prev_tokens": condition_on_previous_text,
+        }
+        if initial_prompt:
+            prompt_ids = self.processor.get_prompt_ids(
+                initial_prompt,
+                return_tensors="pt",
+            )
+            generate_kwargs["prompt_ids"] = prompt_ids.to(self.model.device)
+        language_codes = {"English": "en", "Filipino": "tl"}
+        if language in language_codes:
+            generate_kwargs["language"] = language_codes[language]
+
         output: Any = self.pipe(
             pipeline_input,
             return_timestamps="word",
-            generate_kwargs={"task": "transcribe"},
+            generate_kwargs=generate_kwargs,
         )
         formatted_words = []
         formatted_segments = []
@@ -246,12 +301,13 @@ class ISpeakV4Whisper:
         }
 
 
-# Preserve the old import name for local scripts while using iSpeak_v4.
-OptimizedONNXWhisper = ISpeakV4Whisper
+# Preserve the generic historical import name used by local scripts.
+ISpeakV5Whisper = ISpeakWhisper
+OptimizedONNXWhisper = ISpeakWhisper
 
 
 def load_model(
-    model_name: str | Path | None = None,
+    model_path: str | Path | None = None,
     base_model_path: str | Path | None = None,
-) -> ISpeakV4Whisper:
-    return ISpeakV4Whisper(model_name, base_model_path)
+) -> ISpeakWhisper:
+    return ISpeakWhisper(model_path, base_model_path)

@@ -19,3 +19,37 @@ models/**/.cache/
 
 # IDE
 .vscode/
+
+# Local secrets and credentials
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+key.properties
+credentials.json
+service-account*.json
+
+# Generated dependencies, builds, caches, and model weights
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.log
+/build/
+/dist/
+/coverage/
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.onnx
+*.h5
+*.ckpt

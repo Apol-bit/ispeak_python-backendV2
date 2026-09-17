@@ -4,6 +4,7 @@ from __future__ import annotations
 import numpy as np
 import logging
 import librosa
+import copy
 from difflib import SequenceMatcher
 from typing import Any, Dict, List
 
@@ -80,6 +81,12 @@ _SILENCE_RESPONSE = {
         "message": "No speech detected",
     },
 }
+
+
+def _silence_response(audio_duration: float) -> Dict[str, Any]:
+    response = copy.deepcopy(_SILENCE_RESPONSE)
+    response["duration_seconds"] = round(max(0.0, audio_duration), 3)
+    return response
 
 
 def _extract_word_segments(segments: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -198,7 +205,13 @@ def _compute_overall_score(
     return round(overall, 1)
 
 
-def _run_analysis(file_path: str, y: np.ndarray, sr: int, model) -> Dict[str, Any]:
+def _run_analysis(
+    file_path: str,
+    y: np.ndarray,
+    sr: int,
+    model,
+    language: str = "English",
+) -> Dict[str, Any]:
     """
     Core analysis logic shared by both standard and reference-based analysis.
 
@@ -211,7 +224,7 @@ def _run_analysis(file_path: str, y: np.ndarray, sr: int, model) -> Dict[str, An
 
     if rms < RMS_SILENCE_THRESHOLD:
         logger.info("RMS %.4f below silence threshold %.4f — skipping analysis.", rms, RMS_SILENCE_THRESHOLD)
-        return dict(_SILENCE_RESPONSE)
+        return _silence_response(librosa.get_duration(y=y, sr=sr))
 
     # ---------- NORMALIZE LOUDNESS ----------
     # Keep original for energy analysis (normalization destroys loudness info)
@@ -229,6 +242,7 @@ def _run_analysis(file_path: str, y: np.ndarray, sr: int, model) -> Dict[str, An
         word_timestamps=True,
         initial_prompt="Umm, uh, hmm, like, you know, ah, er, um, ano, parang, yung, basically, actually.",
         condition_on_previous_text=False,
+        language=language,
     )
 
     text: str = transcription.get("text", "").strip()
@@ -244,12 +258,12 @@ def _run_analysis(file_path: str, y: np.ndarray, sr: int, model) -> Dict[str, An
             "Transcript too short (%d word(s): %r) — treating as no speech.",
             word_count, text,
         )
-        return dict(_SILENCE_RESPONSE)
+        return _silence_response(librosa.get_duration(y=y, sr=sr))
 
     word_segments = _extract_word_segments(segments)
     if not word_segments:
         logger.info("No word-level timestamps returned by Whisper — treating as no speech.")
-        return dict(_SILENCE_RESPONSE)
+        return _silence_response(librosa.get_duration(y=y, sr=sr))
 
     # Log each word for debugging filler detection
     logger.info("=== WORD SEGMENTS (%d words) ===", len(word_segments))
@@ -319,6 +333,8 @@ def _run_analysis(file_path: str, y: np.ndarray, sr: int, model) -> Dict[str, An
 
     return {
         "transcription": text,
+        "language": language,
+        "duration_seconds": round(float(audio_duration), 3),
         "word_timestamps": word_timestamps,
         "scores": {
             "overall":    overall_score,
@@ -389,7 +405,11 @@ def _run_analysis(file_path: str, y: np.ndarray, sr: int, model) -> Dict[str, An
     }
 
 
-def generate_full_analysis(file_path: str, model) -> Dict[str, Any]:
+def generate_full_analysis(
+    file_path: str,
+    model,
+    language: str = "English",
+) -> Dict[str, Any]:
     """
     Run full speech analysis on an audio file (standard mode, no reference).
 
@@ -403,7 +423,7 @@ def generate_full_analysis(file_path: str, model) -> Dict[str, Any]:
     y, sr = librosa.load(file_path, sr=16000, mono=True)
     sr = int(sr)
 
-    result = _run_analysis(file_path, y, sr, model)
+    result = _run_analysis(file_path, y, sr, model, language)
 
     # Remove internal data before returning
     result.pop("_internal", None)
@@ -415,6 +435,7 @@ def generate_reference_analysis(
     user_path: str,
     reference_path: str,
     model,
+    language: str = "English",
 ) -> Dict[str, Any]:
     """
     Run reference-based speech analysis.
@@ -439,10 +460,10 @@ def generate_reference_analysis(
 
     # ---------- ANALYZE BOTH ----------
     logger.info("Analyzing reference audio...")
-    ref_result = _run_analysis(reference_path, y_ref, sr_ref, model)
+    ref_result = _run_analysis(reference_path, y_ref, sr_ref, model, language)
 
     logger.info("Analyzing user audio...")
-    user_result = _run_analysis(user_path, y_user, sr, model)
+    user_result = _run_analysis(user_path, y_user, sr, model, language)
 
     # If either analysis returned silence, return the user result as-is
     if not user_result.get("_internal") or not ref_result.get("_internal"):

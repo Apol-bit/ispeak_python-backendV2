@@ -7,9 +7,9 @@ import importlib.util
 from pathlib import Path
 
 from model import (
-    DEFAULT_BASE_MODEL_PATH,
-    DEFAULT_SPEECH_MODEL_PATH,
     ModelUnavailableError,
+    configured_adapter_path,
+    configured_base_model_path,
     declared_base_model_id,
     resolve_model_paths,
 )
@@ -53,10 +53,11 @@ def main() -> int:
             "error": None,
         }
     except ModelUnavailableError as exc:
+        adapter_path = configured_adapter_path()
         speech = {
             "available": False,
-            "adapter_path": str(DEFAULT_SPEECH_MODEL_PATH),
-            "base_path": str(DEFAULT_BASE_MODEL_PATH),
+            "adapter_path": str(adapter_path),
+            "base_path": str(configured_base_model_path(adapter_path=adapter_path)),
             "base_model_id": None,
             "error": str(exc),
         }
@@ -74,7 +75,8 @@ def main() -> int:
     print("iSpeak backend readiness")
     print(f"  Project folder     : {PROJECT_ROOT}")
     print(f"  Python dependencies: {'ready' if not missing_packages else 'missing ' + ', '.join(missing_packages)}")
-    print(f"  iSpeak_v4 model    : {'ready' if speech['available'] else 'missing/incomplete'}")
+    model_name = Path(speech["adapter_path"]).name
+    print(f"  {model_name} model    : {'ready' if speech['available'] else 'missing/incomplete'}")
     print(f"    Adapter: {speech['adapter_path']}")
     print(f"    Base   : {speech['base_path']}")
     if speech["base_model_id"]:

@@ -12980,6 +12980,7 @@
   "clean_up_tokenization_spaces": true,
   "eos_token": "<|endoftext|>",
   "errors": "replace",
+  "extra_special_tokens": {},
   "model_max_length": 1024,
   "pad_token": "<|endoftext|>",
   "processor_class": "WhisperProcessor",

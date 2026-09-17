@@ -1,8 +1,8 @@
 # Team setup
 
-Install Python 3.13. The `models/iSpeak_v4` directory contains the local PEFT
+Install Python 3.13. The `models/iSpeak_v5` directory contains the local PEFT
 adapter. Its declared base model is `openai/whisper-small` and must be stored at
-`models/iSpeak_v4/base_model` for offline runtime use.
+`models/iSpeak_v5/base_model` for offline runtime use.
 
 From PowerShell in this repository, create the environment, install dependencies,
 and explicitly download the base model once:
@@ -21,3 +21,6 @@ model files. Start it with:
 Check `http://127.0.0.1:8000/health`. The server starts in degraded mode when
 model weights are missing; `/transcribe` returns HTTP 503 with the exact reason
 instead of crashing. No model inference API or runtime model download is used.
+
+To use compatible model files from another location, set
+`ISPEAK_MODEL_PATH` and `ISPEAK_BASE_MODEL_PATH` before starting the backend.
