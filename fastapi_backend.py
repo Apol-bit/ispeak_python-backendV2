@@ -18,6 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from audio_analysis_processing_files.filler_words import filler_classifier_status
 from model import DEFAULT_MODEL_NAME, ModelUnavailableError, load_model
 from whisper_service import generate_full_analysis, generate_reference_analysis
+from audio_validation import SpeechValidationError
 
 ALLOWED_EXTENSIONS = {".wav", ".mp3", ".m4a", ".flac", ".ogg", ".aac"}
 MAX_UPLOAD_MB = int(os.getenv("ISPEAK_MAX_UPLOAD_MB", "25"))
@@ -215,6 +216,8 @@ async def transcribe(request: Request):
         finally:
             inference_semaphore.release()
         return result
+    except SpeechValidationError as exc:
+        raise HTTPException(status_code=400, detail={"code": exc.code, "message": exc.message}) from exc
     except HTTPException:
         raise
     except Exception as exc:

@@ -4,7 +4,7 @@ from __future__ import annotations
 import numpy as np
 import logging
 import librosa
-import copy
+from audio_validation import MIN_RMS, load_valid_audio, validate_audio, validate_transcript
 from difflib import SequenceMatcher
 from typing import Any, Dict, List
 
@@ -22,71 +22,10 @@ from audio_analysis_processing_files.vocal_variety import (
 
 logger = logging.getLogger(__name__)
 
-# Minimum RMS to treat audio as containing real speech.
-# 1e-4 was far too low — background noise easily exceeds it.
-RMS_SILENCE_THRESHOLD = 0.01
-
-# Minimum real words required after transcription.
-# Guards against Whisper hallucinating text on noise.
-MIN_WORD_COUNT = 5
-
-_SILENCE_RESPONSE = {
-    "transcription": "",
-    "word_timestamps": [],
-    "scores": {
-        "overall": 0,
-        "clarity": 0,
-        "pacing": 0,
-        "energy": 0,
-        "vocal_variety": 0,
-        "articulation": 0,
-        "speaking_rate": 0,
-        "filler_words": 100,
-    },
-    "pacing": {
-        "wpm": 0.0,
-        "message": "No speech detected"
-    },
-    "speaking_rate": {
-        "score": 0,
-        "wpm": 0.0,
-        "articulation_rate": 0.0,
-        "message": "No speech detected",
-    },
-    "pronunciation": {
-        "score": 0,
-        "message": "No speech detected",
-        "problematic_words": [],
-    },
-    "fillers": {
-        "score": 100,
-        "analysis_available": True,
-        "count": 0,
-        "rate": 0.0,
-        "words": [],
-        "candidates": [],
-        "message": "No speech detected",
-        "method": "local token-classification model only",
-    },
-    "vocal_variety": {
-        "score": 0,
-        "signal_intensity": {},
-        "frequency_pitch": {},
-        "temporal_pauses": {},
-    },
-    "articulation": {
-        "score": 0,
-        "accurate_pronunciation": {},
-        "clear_enunciation": {},
-        "message": "No speech detected",
-    },
-}
-
-
-def _silence_response(audio_duration: float) -> Dict[str, Any]:
-    response = copy.deepcopy(_SILENCE_RESPONSE)
-    response["duration_seconds"] = round(max(0.0, audio_duration), 3)
-    return response
+# Compatibility exports used by the standalone evaluation utility.
+# Validation is enforced by audio_validation before ASR and scoring.
+RMS_SILENCE_THRESHOLD = MIN_RMS
+MIN_WORD_COUNT = 3
 
 
 def _extract_word_segments(segments: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -122,8 +61,8 @@ def _compute_pacing_score(pacing_stats: Dict[str, Any]) -> float:
     """
     Convert pacing status into a 0-100 score.
 
-    Excellent pacing → 100
-    Slow or fast     → scaled by how far WPM is from the ideal range
+    Excellent pacing â†’ 100
+    Slow or fast     â†’ scaled by how far WPM is from the ideal range
     """
     status = pacing_stats.get("pacing_status", "")
     wpm = pacing_stats.get("wpm", 0.0)
@@ -136,11 +75,11 @@ def _compute_pacing_score(pacing_stats: Dict[str, Any]) -> float:
 
     # Ideal range is 120-150 WPM (from calculate_pacing defaults)
     if status == "Slow pacing":
-        # 0 WPM → 0, approaching 120 WPM → 100
+        # 0 WPM â†’ 0, approaching 120 WPM â†’ 100
         return round(min(100.0, max(0.0, (wpm / 120.0) * 100)), 1)
 
     if status == "Fast pacing":
-        # 150 WPM → 100, penalty grows beyond that
+        # 150 WPM â†’ 100, penalty grows beyond that
         excess = wpm - 150.0
         return round(min(100.0, max(0.0, 100.0 - (excess / 150.0) * 100)), 1)
 
@@ -153,7 +92,7 @@ def _compute_energy_score(energy_stats: Dict[str, Any]) -> float:
     Convert energy stats into a 0-100 score.
 
     Factors:
-    - loudness_status: Normal volume → full points
+    - loudness_status: Normal volume â†’ full points
     - is_low_variation: penalize monotone energy
     - is_monotone: penalize monotone pitch
     """
@@ -215,21 +154,11 @@ def _run_analysis(
     """
     Core analysis logic shared by both standard and reference-based analysis.
 
-    Returns the full analysis dict or the silence response.
+    Returns analysis for usable speech; invalid input raises SpeechValidationError.
     """
 
-    # ---------- SILENCE GATE ----------
-    rms = float(np.sqrt(np.mean(y ** 2)))
-    logger.info("Audio RMS value: %f", rms)
-
-    if rms < RMS_SILENCE_THRESHOLD:
-        logger.info("RMS %.4f below silence threshold %.4f — skipping analysis.", rms, RMS_SILENCE_THRESHOLD)
-        return _silence_response(librosa.get_duration(y=y, sr=sr))
-
-    # ---------- NORMALIZE LOUDNESS ----------
-    # Keep original for energy analysis (normalization destroys loudness info)
+    audio_duration = validate_audio(y, sr)
     y_original = y.copy()
-    y = y * (0.05 / rms)
 
     # ---------- TRANSCRIBE ----------
     # Passing an initial_prompt with filler words strongly biases Whisper
@@ -251,19 +180,8 @@ def _run_analysis(
     logger.info("=== WHISPER TRANSCRIPTION ===")
     logger.info("Full text: %s", text)
 
-    # ---------- HALLUCINATION GUARD ----------
-    word_count = len(text.split())
-    if not text or word_count < MIN_WORD_COUNT:
-        logger.info(
-            "Transcript too short (%d word(s): %r) — treating as no speech.",
-            word_count, text,
-        )
-        return _silence_response(librosa.get_duration(y=y, sr=sr))
-
     word_segments = _extract_word_segments(segments)
-    if not word_segments:
-        logger.info("No word-level timestamps returned by Whisper — treating as no speech.")
-        return _silence_response(librosa.get_duration(y=y, sr=sr))
+    validate_transcript(text, word_segments, audio_duration)
 
     # Log each word for debugging filler detection
     logger.info("=== WORD SEGMENTS (%d words) ===", len(word_segments))
@@ -278,7 +196,7 @@ def _run_analysis(
     audio_duration = librosa.get_duration(y=y, sr=sr)
 
     # ---------- ENERGY ----------
-    # Use ORIGINAL audio — normalization flattens loudness, making score always 100
+    # Use ORIGINAL audio â€” normalization flattens loudness, making score always 100
     intensity_stats = analyze_signal_intensity(y_original, sr)
     frequency_stats = analyze_frequency_pitch(y_original, sr)
     pause_stats = analyze_temporal_pauses(word_segments)
@@ -332,6 +250,7 @@ def _run_analysis(
     overall_score = _compute_overall_score(pacing_score, clarity_score, energy_score)
 
     return {
+        "analysis_valid": True,
         "transcription": text,
         "language": language,
         "duration_seconds": round(float(audio_duration), 3),
@@ -341,7 +260,7 @@ def _run_analysis(
             "clarity":    clarity_score,
             "pacing":     pacing_score,
             "energy":     energy_score,
-            "vocal_variety": energy_score,
+            "vocal_variety": energy_score if frequency_stats.get("analysis_available") else None,
             "articulation": pronunciation_score,
             "speaking_rate": pacing_score,
             "filler_words": filler_score,
@@ -370,7 +289,9 @@ def _run_analysis(
             "clear_enunciation": articulation_stats.get("clear_enunciation", {}),
         },
         "vocal_variety": {
-            "score": energy_score,
+            "score": energy_score if frequency_stats.get("analysis_available") else None,
+            "analysis_available": frequency_stats.get("analysis_available", False),
+            "energy_score_is_partial": not frequency_stats.get("analysis_available", False),
             "signal_intensity": intensity_stats,
             "frequency_pitch": frequency_stats,
             "temporal_pauses": pause_stats,
@@ -392,7 +313,7 @@ def _run_analysis(
             "message": filler_stats.get("message", ""),
             "method": filler_stats.get("method", ""),
         },
-        # Internal — used by reference comparison
+        # Internal â€” used by reference comparison
         "_internal": {
             "energy_stats": energy_stats,
             "pacing_stats": pacing_stats,
@@ -420,7 +341,7 @@ def generate_full_analysis(
     """
 
     # ---------- LOAD AUDIO ----------
-    y, sr = librosa.load(file_path, sr=16000, mono=True)
+    y, sr = load_valid_audio(file_path)
     sr = int(sr)
 
     result = _run_analysis(file_path, y, sr, model, language)
@@ -446,15 +367,15 @@ def generate_reference_analysis(
 
     Returns
     -------
-    dict — same structure as generate_full_analysis, with scores adjusted
+    dict â€” same structure as generate_full_analysis, with scores adjusted
            relative to the reference baseline.
     """
 
     logger.info("=== REFERENCE-BASED ANALYSIS ===")
 
     # ---------- LOAD BOTH AUDIO FILES ----------
-    y_user, sr = librosa.load(user_path, sr=16000, mono=True)
-    y_ref, sr_ref = librosa.load(reference_path, sr=16000, mono=True)
+    y_user, sr = load_valid_audio(user_path)
+    y_ref, sr_ref = load_valid_audio(reference_path)
     sr = int(sr)
     sr_ref = int(sr_ref)
 
@@ -480,7 +401,7 @@ def generate_reference_analysis(
 
     if ref_wpm > 0 and user_wpm > 0:
         wpm_ratio = user_wpm / ref_wpm
-        # Perfect ratio = 1.0 → score 100. Penalty for deviation.
+        # Perfect ratio = 1.0 â†’ score 100. Penalty for deviation.
         deviation = abs(1.0 - wpm_ratio)
         ref_pacing_score = round(max(0.0, 100.0 - (deviation * 100.0)), 1)
     else:
@@ -496,10 +417,10 @@ def generate_reference_analysis(
     ref_is_monotone = ref_energy.get("is_monotone", False)
     user_is_monotone = user_energy.get("is_monotone", False)
 
-    # If reference is monotone but user isn't, that's good — bonus
+    # If reference is monotone but user isn't, that's good â€” bonus
     if ref_is_monotone and not user_is_monotone:
         ref_energy_score = min(100.0, ref_energy_score + 10.0)
-    # If user is monotone but reference isn't, that's bad — penalty already applied
+    # If user is monotone but reference isn't, that's bad â€” penalty already applied
     ref_energy_score = round(ref_energy_score, 1)
 
     # ---------- REFERENCE-BASED ENUNCIATION ----------
@@ -559,16 +480,18 @@ def generate_reference_analysis(
     user_result["scores"]["pacing"] = ref_pacing_score
     user_result["scores"]["energy"] = ref_energy_score
     user_result["scores"]["speaking_rate"] = ref_pacing_score
-    user_result["scores"]["vocal_variety"] = ref_energy_score
+    pitch_available = user_result["vocal_variety"].get("analysis_available", False)
+    user_result["scores"]["vocal_variety"] = ref_energy_score if pitch_available else None
     user_result["speaking_rate"]["score"] = ref_pacing_score
-    user_result["vocal_variety"]["score"] = ref_energy_score
+    user_result["vocal_variety"]["score"] = ref_energy_score if pitch_available else None
+    user_result["speaking_rate"]["reference_wpm"] = ref_wpm
     user_result["scores"]["overall"] = ref_overall
 
     # Clean up internal data
     user_result.pop("_internal", None)
 
     logger.info(
-        "Reference comparison — Ref WPM: %.1f, User WPM: %.1f, "
+        "Reference comparison â€” Ref WPM: %.1f, User WPM: %.1f, "
         "Adj Pacing: %.1f, Adj Energy: %.1f, Adj Overall: %.1f",
         ref_wpm, user_wpm, ref_pacing_score, ref_energy_score, ref_overall,
     )

@@ -31,7 +31,7 @@ def analyze_speaking_rate(
     """Calculate words per total minute and words per active speaking minute."""
     if audio_duration_seconds <= 0:
         raise ValueError("Audio duration must be greater than zero")
-    if audio_duration_seconds < 2.0:
+    if audio_duration_seconds < 1.0:
         return {
             "wpm": 0.0,
             "articulation_rate": 0.0,
