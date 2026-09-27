@@ -4,18 +4,19 @@ from __future__ import annotations
 
 import logging
 import os
-import asyncio
-import shutil
+import time
 import tempfile
 import traceback
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.responses import JSONResponse
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 
-from audio_analysis_processing_files.filler_words import filler_classifier_status
+from audio_analysis_processing_files.filler_words import filler_classifier_status, _default_classifier
+from analysis_admission import AnalysisAdmission, AdmissionFull, AdmissionTimeout, finish_thread_on_cancel
 from model import DEFAULT_MODEL_NAME, ModelUnavailableError, load_model
 from whisper_service import generate_full_analysis, generate_reference_analysis
 from audio_validation import SpeechValidationError
@@ -39,7 +40,8 @@ CORS_ORIGINS: list[str] = (
 if IS_PRODUCTION and CORS_ORIGINS == ["*"]:
     raise RuntimeError("ISPEAK_CORS_ORIGINS must be explicit in production")
 
-inference_semaphore = asyncio.Semaphore(MAX_CONCURRENT_INFERENCES)
+MAX_QUEUED_ANALYSES = max(0, int(os.getenv("ISPEAK_MAX_QUEUED_ANALYSES", "4")))
+admission = AnalysisAdmission(MAX_CONCURRENT_INFERENCES, MAX_QUEUED_ANALYSES, QUEUE_TIMEOUT_SECONDS)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -51,19 +53,30 @@ async def lifespan(app: FastAPI):
     app.state.model = None
     app.state.model_error = None
     try:
-        app.state.model = load_model()
+        app.state.model = await run_in_threadpool(load_model)
     except ModelUnavailableError as exc:
         app.state.model_error = str(exc)
         logger.warning("Speech analysis unavailable: %s", exc)
     except Exception as exc:  # Keep startup alive and expose the failure in /health.
         app.state.model_error = f"Unexpected model-loading failure: {exc}"
         logger.exception("Unexpected model-loading failure")
+    app.state.filler_ready = False
+    app.state.filler_error = None
+    try:
+        # Exercise the existing classifier; no scoring or classification changes.
+        await run_in_threadpool(lambda: _default_classifier()("Readiness check."))
+        app.state.filler_ready = True
+    except Exception as exc:
+        app.state.filler_error = str(exc)
+        logger.warning("Filler analysis unavailable: %s", exc)
     yield
 
 
 app = FastAPI(title="iSpeak Speech Analysis Backend", lifespan=lifespan)
 app.state.model = None
 app.state.model_error = "Application lifespan has not started"
+app.state.filler_ready = False
+app.state.filler_error = "Application lifespan has not started"
 
 app.add_middleware(
     CORSMiddleware,
@@ -128,13 +141,43 @@ def _copy_with_limit(source, dest, max_bytes: int = MAX_UPLOAD_BYTES) -> int:
     return total
 
 
+def _save_upload(upload, suffix):
+    path = None
+    try:
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as temp:
+            path = temp.name
+            _copy_with_limit(upload.file, temp)
+        _validate_media_signature(path, suffix)
+        return path
+    except BaseException:
+        if path and os.path.exists(path):
+            os.remove(path)
+        raise
+
+
+@app.get("/live")
+async def live():
+    return {"status": "alive"}
+
+
+@app.get("/metrics")
+async def metrics():
+    # Private local service: process counters only; no recordings or transcripts.
+    return admission.snapshot()
+
+
+@app.get("/ready")
 @app.get("/health")
-async def health() -> dict[str, Any]:
+async def health():
     speech_ready = app.state.model is not None
     model = app.state.model
     filler_status = filler_classifier_status()
-    return {
-        "status": "ready" if speech_ready else "degraded",
+    filler_status["files_available"] = filler_status["available"]
+    filler_status["available"] = app.state.filler_ready
+    filler_status["error"] = app.state.filler_error
+    ready = speech_ready and app.state.filler_ready
+    return JSONResponse(status_code=200 if ready else 503, content={
+        "status": "ready" if ready else "degraded",
         "speech_model": {
             "available": speech_ready,
             "error": app.state.model_error,
@@ -143,11 +186,27 @@ async def health() -> dict[str, Any]:
             "base_model_path": str(getattr(model, "base_model_path", "")) or None,
         },
         "filler_classifier": filler_status,
-    }
+        "admission": admission.snapshot(),
+    })
 
 
 @app.post("/transcribe")
-async def transcribe(request: Request):
+async def transcribe(request: Request, response: Response):
+    try:
+        async with admission.reserve():
+            return await _transcribe(request, response)
+    except (AdmissionFull, AdmissionTimeout) as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Speech analysis is busy. Please try again shortly.",
+            headers={"Retry-After": "5"},
+        ) from exc
+    finally:
+        # Starlette owns multipart spool files, independently of our copies.
+        await request.close()
+
+
+async def _transcribe(request: Request, response: Response):
     if app.state.model is None:
         raise HTTPException(
             status_code=503,
@@ -158,7 +217,7 @@ async def transcribe(request: Request):
         )
 
     try:
-        form = await request.form()
+        form = await request.form(max_files=2, max_fields=4)
     except (AssertionError, RuntimeError) as exc:
         raise HTTPException(
             status_code=503,
@@ -179,48 +238,39 @@ async def transcribe(request: Request):
     ref_temp_path = None
 
     try:
-        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as temp:
-            temp_path = temp.name
-            _copy_with_limit(file.file, temp)
-        _validate_media_signature(temp_path, suffix)
-
+        temp_path = _save_upload(file, suffix)
         if reference_audio is not None:
-            with tempfile.NamedTemporaryFile(suffix=ref_suffix, delete=False) as ref_temp:
-                ref_temp_path = ref_temp.name
-                _copy_with_limit(reference_audio.file, ref_temp)
-            _validate_media_signature(ref_temp_path, ref_suffix)
+            ref_temp_path = _save_upload(reference_audio, ref_suffix)
 
-        try:
-            await asyncio.wait_for(inference_semaphore.acquire(), QUEUE_TIMEOUT_SECONDS)
-        except TimeoutError as exc:
-            raise HTTPException(
-                status_code=503,
-                detail="Speech analysis is busy. Please try again shortly.",
-            ) from exc
-        try:
+        async with admission.worker() as queue_wait_ms:
+            if await request.is_disconnected():
+                raise HTTPException(status_code=499, detail="Client disconnected")
+            started = time.perf_counter()
             if ref_temp_path:
-                result = await run_in_threadpool(
-                    generate_reference_analysis,
-                    temp_path,
-                    ref_temp_path,
-                    app.state.model,
-                    language,
+                work = run_in_threadpool(
+                    generate_reference_analysis, temp_path, ref_temp_path,
+                    app.state.model, language,
                 )
             else:
-                result = await run_in_threadpool(
-                    generate_full_analysis,
-                    temp_path,
-                    app.state.model,
-                    language,
+                work = run_in_threadpool(
+                    generate_full_analysis, temp_path, app.state.model, language,
                 )
-        finally:
-            inference_semaphore.release()
-        return result
+            result = await finish_thread_on_cancel(work)
+            response.headers["X-Analysis-Queue-Wait-Ms"] = f"{queue_wait_ms:.3f}"
+            response.headers["X-Analysis-Processing-Ms"] = f"{(time.perf_counter() - started) * 1000:.3f}"
+            admission.completed += 1
+            app.state.filler_ready = result.get("fillers", {}).get("analysis_available") is True
+            app.state.filler_error = None if app.state.filler_ready else "Filler analysis unavailable on last request"
+            return result
+    except (AdmissionFull, AdmissionTimeout):
+        raise
     except SpeechValidationError as exc:
+        admission.failed += 1
         raise HTTPException(status_code=400, detail={"code": exc.code, "message": exc.message}) from exc
     except HTTPException:
         raise
     except Exception as exc:
+        admission.failed += 1
         logger.error("Processing failed for %s:\n%s", file.filename, traceback.format_exc())
         raise HTTPException(
             status_code=500,
