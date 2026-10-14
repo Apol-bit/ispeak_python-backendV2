@@ -1,0 +1,25 @@
+# Allow only runtime code, dependency manifests and trusted model artifacts.
+**
+!Dockerfile
+!requirements.txt
+!requirements-linux.txt
+!fastapi_backend.py
+!model.py
+!whisper_service.py
+!audio_validation.py
+!analysis_admission.py
+!audio_analysis_processing_files/
+!audio_analysis_processing_files/**
+!models/
+!models/iSpeak_v5/
+!models/iSpeak_v5/**
+!models/filler_classifier/
+!models/filler_classifier/**
+**/__pycache__/
+**/*.pyc
+**/.cache/
+**/.git/
+**/.env*
+**/*.log
+**/training_args.bin
+**/README.md

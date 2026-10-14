@@ -1,0 +1,2 @@
+# Shared runtime pins include PEFT's Accelerate/psutil dependencies.
+-r requirements.txt

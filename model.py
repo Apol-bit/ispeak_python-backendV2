@@ -184,10 +184,11 @@ class ISpeakWhisper:
         use_cuda = torch.cuda.is_available()
         device = 0 if use_cuda else -1
         device_label = "GPU (CUDA)" if use_cuda else "CPU"
-        print(
-            f"Loading {self.model_name} adapter from {self.adapter_path} "
-            f"with base model {self.base_model_path} on {device_label}..."
-        )
+        if os.getenv("ISPEAK_ENV", "development").lower() == "production":
+            print(f"Loading speech model on {device_label}...")
+        else:
+            print(f"Loading {self.model_name} adapter from {self.adapter_path} "
+                  f"with base model {self.base_model_path} on {device_label}...")
 
         try:
             # Transformers and PEFT expose these through dynamic factory APIs;

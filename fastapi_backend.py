@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import logging
+import hmac
 import os
 import time
 import tempfile
-import traceback
 from contextlib import asynccontextmanager
 from typing import Any
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
@@ -27,24 +28,40 @@ MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
 
 # Environment-based configuration
 HOST = os.getenv("ISPEAK_HOST", "127.0.0.1")
-PORT = int(os.getenv("ISPEAK_PORT", "8000"))
+PORT = int(os.getenv("PORT") or os.getenv("ISPEAK_PORT", "8000"))
 MAX_CONCURRENT_INFERENCES = max(1, int(os.getenv("ISPEAK_MAX_CONCURRENT_INFERENCES", "1")))
 QUEUE_TIMEOUT_SECONDS = max(1, int(os.getenv("ISPEAK_QUEUE_TIMEOUT_SECONDS", "30")))
 IS_PRODUCTION = os.getenv("ISPEAK_ENV", "development").lower() == "production"
+SERVICE_TOKEN = os.getenv("ISPEAK_SERVICE_TOKEN", "")
+if IS_PRODUCTION and len(SERVICE_TOKEN) < 32:
+    raise RuntimeError("ISPEAK_SERVICE_TOKEN must contain at least 32 characters in production")
 
 # CORS: comma-separated origins, or "*" for development
 _cors_env = os.getenv("ISPEAK_CORS_ORIGINS", "*").strip()
 CORS_ORIGINS: list[str] = (
     ["*"] if _cors_env == "*" else [o.strip() for o in _cors_env.split(",") if o.strip()]
 )
-if IS_PRODUCTION and CORS_ORIGINS == ["*"]:
+if IS_PRODUCTION and "*" in CORS_ORIGINS:
     raise RuntimeError("ISPEAK_CORS_ORIGINS must be explicit in production")
+if IS_PRODUCTION:
+    for origin in CORS_ORIGINS:
+        parsed = urlsplit(origin)
+        if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password or parsed.path or parsed.query or parsed.fragment:
+            raise RuntimeError("Production ISPEAK_CORS_ORIGINS must contain exact HTTPS origins or be empty")
 
 MAX_QUEUED_ANALYSES = max(0, int(os.getenv("ISPEAK_MAX_QUEUED_ANALYSES", "4")))
 admission = AnalysisAdmission(MAX_CONCURRENT_INFERENCES, MAX_QUEUED_ANALYSES, QUEUE_TIMEOUT_SECONDS)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+def _log_failure(event: str, exc: Exception) -> None:
+    # Tracebacks may include speech, filenames and model configuration.
+    if not IS_PRODUCTION and os.getenv("ISPEAK_DEBUG_ERRORS") == "true":
+        logger.exception(event)
+    else:
+        logger.error("%s category=%s", event, type(exc).__name__)
 
 
 @asynccontextmanager
@@ -56,10 +73,10 @@ async def lifespan(app: FastAPI):
         app.state.model = await run_in_threadpool(load_model)
     except ModelUnavailableError as exc:
         app.state.model_error = str(exc)
-        logger.warning("Speech analysis unavailable: %s", exc)
+        _log_failure("speech_model_unavailable", exc)
     except Exception as exc:  # Keep startup alive and expose the failure in /health.
         app.state.model_error = f"Unexpected model-loading failure: {exc}"
-        logger.exception("Unexpected model-loading failure")
+        _log_failure("model_startup_failed", exc)
     app.state.filler_ready = False
     app.state.filler_error = None
     try:
@@ -68,15 +85,29 @@ async def lifespan(app: FastAPI):
         app.state.filler_ready = True
     except Exception as exc:
         app.state.filler_error = str(exc)
-        logger.warning("Filler analysis unavailable: %s", exc)
+        _log_failure("filler_model_unavailable", exc)
     yield
 
 
-app = FastAPI(title="iSpeak Speech Analysis Backend", lifespan=lifespan)
+app = FastAPI(title="iSpeak Speech Analysis Backend", lifespan=lifespan,
+              docs_url=None if IS_PRODUCTION else "/docs",
+              redoc_url=None if IS_PRODUCTION else "/redoc",
+              openapi_url=None if IS_PRODUCTION else "/openapi.json")
 app.state.model = None
 app.state.model_error = "Application lifespan has not started"
 app.state.filler_ready = False
 app.state.filler_error = "Application lifespan has not started"
+
+
+@app.middleware("http")
+async def service_authentication(request: Request, call_next):
+    # Minimal probes remain available to the host; analysis/metrics require the
+    # private service credential before parsing any upload or reserving work.
+    if SERVICE_TOKEN and request.url.path not in {"/live", "/ready", "/health"}:
+        supplied = request.headers.get("X-iSpeak-Service-Token", "")
+        if not hmac.compare_digest(supplied.encode(), SERVICE_TOKEN.encode()):
+            return JSONResponse(status_code=401, content={"detail": "Service authentication required"})
+    return await call_next(request)
 
 app.add_middleware(
     CORSMiddleware,
@@ -176,6 +207,12 @@ async def health():
     filler_status["available"] = app.state.filler_ready
     filler_status["error"] = app.state.filler_error
     ready = speech_ready and app.state.filler_ready
+    if IS_PRODUCTION:
+        return JSONResponse(status_code=200 if ready else 503, content={
+            "status": "ready" if ready else "degraded",
+            "speech_model": {"available": speech_ready},
+            "filler_classifier": {"available": app.state.filler_ready},
+        })
     return JSONResponse(status_code=200 if ready else 503, content={
         "status": "ready" if ready else "degraded",
         "speech_model": {
@@ -212,7 +249,7 @@ async def _transcribe(request: Request, response: Response):
             status_code=503,
             detail={
                 "message": "Local speech model is unavailable",
-                "reason": app.state.model_error,
+                "reason": "Speech model unavailable" if IS_PRODUCTION else app.state.model_error,
             },
         )
 
@@ -271,7 +308,7 @@ async def _transcribe(request: Request, response: Response):
         raise
     except Exception as exc:
         admission.failed += 1
-        logger.error("Processing failed for %s:\n%s", file.filename, traceback.format_exc())
+        _log_failure("audio_processing_failed", exc)
         raise HTTPException(
             status_code=500,
             detail="Audio processing failed",
@@ -282,4 +319,4 @@ async def _transcribe(request: Request, response: Response):
                 try:
                     os.remove(path)
                 except OSError as exc:
-                    logger.warning("Failed to remove temp file %s: %s", path, exc)
+                    _log_failure("temporary_audio_cleanup_failed", exc)

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import numpy as np
 import logging
+import os
 import librosa
 from audio_validation import MIN_RMS, load_valid_audio, validate_audio, validate_transcript
 from difflib import SequenceMatcher
@@ -21,6 +22,14 @@ from audio_analysis_processing_files.vocal_variety import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _log_transcription(text, words):
+    logger.info("Transcription complete words=%d", len(words))
+    if os.getenv("ISPEAK_ENV", "development").lower() != "production" and os.getenv("ISPEAK_DEBUG_SPEECH_LOGS") == "true":
+        logger.debug("Full text: %s", text)
+        for i, word in enumerate(words):
+            logger.debug("Word %d: %s", i, word)
 
 # Compatibility exports used by the standalone evaluation utility.
 # Validation is enforced by audio_validation before ASR and scoring.
@@ -177,17 +186,10 @@ def _run_analysis(
     text: str = transcription.get("text", "").strip()
     segments: List[Dict[str, Any]] = transcription.get("segments", [])
 
-    logger.info("=== WHISPER TRANSCRIPTION ===")
-    logger.info("Full text: %s", text)
-
     word_segments = _extract_word_segments(segments)
     validate_transcript(text, word_segments, audio_duration)
 
-    # Log each word for debugging filler detection
-    logger.info("=== WORD SEGMENTS (%d words) ===", len(word_segments))
-    for i, ws in enumerate(word_segments):
-        logger.info("  [%d] '%s' (%.2f-%.2f, conf=%s)",
-                    i, ws.get('text','').strip(), ws.get('start',0), ws.get('end',0), ws.get('confidence'))
+    _log_transcription(text, word_segments)
 
     # ---------- WORD TIMESTAMPS (for Teleprompter UI) ----------
     word_timestamps = _extract_word_timestamps(segments)
@@ -220,7 +222,7 @@ def _run_analysis(
         pacing_stats["total_pause_seconds"] = pause_stats["total_pause_seconds"]
         pacing_score = _compute_pacing_score(pacing_stats)
     except ValueError as e:
-        logger.error("Pacing analysis failed: %s", e)
+        logger.error("Pacing analysis failed category=%s", type(e).__name__)
         pacing_stats = {}
         pacing_score = 0.0
 

@@ -9,6 +9,9 @@ __pycache__/
 # Temp audio
 temp_audio_folder/
 
+# Local evaluation output; provenance is not approved for publication.
+/evaluation_results.json
+
 # Large model binaries (too big for GitHub, download separately)
 *.safetensors
 *.bin

@@ -1,6 +1,7 @@
 ﻿annotated-doc==0.0.4
 annotated-types==0.7.0
-anyio==4.13.0
+accelerate==1.14.0
+anyio==4.14.2
 audioop-lts==0.2.2
 audioread==3.1.0
 certifi==2026.4.22
@@ -12,7 +13,7 @@ decorator==5.2.1
 fastapi==0.136.1
 filelock==3.29.0
 flatbuffers==25.12.19
-fsspec==2026.4.0
+fsspec==2026.6.0
 h11==0.16.0
 hf-xet==1.6.0
 httpcore==1.0.9
@@ -38,6 +39,7 @@ peft==0.19.1
 platformdirs==4.9.6
 pooch==1.9.0
 protobuf==7.34.1
+psutil==7.2.2
 pycparser==3.0
 pydantic==2.13.4
 pydantic_core==2.46.4
@@ -67,6 +69,6 @@ transformers==5.10.1
 typer==0.25.1
 typing-inspection==0.4.2
 typing_extensions==4.15.0
-urllib3==2.7.0
+urllib3==2.8.0
 uvicorn==0.46.0
 
