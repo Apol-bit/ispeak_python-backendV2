@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "approval_record": "",
+  "training_records": {"v5": null, "v6": null},
+  "samples": [
+    {
+      "id": "english-001",
+      "language": "English",
+      "file": "audio/english-001.wav",
+      "sha256": "",
+      "speaker_id": "",
+      "approved": false,
+      "synthetic": false,
+      "consent_record": "",
+      "reference": "",
+      "reference_verified": false,
+      "reference_reviewer": ""
+    }
+  ]
+}
