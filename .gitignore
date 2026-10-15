@@ -12,6 +12,13 @@ temp_audio_folder/
 # Local evaluation output; provenance is not approved for publication.
 /evaluation_results.json
 
+# Future unapproved model bundles stay private; baseline tracked metadata remains.
+/models/iSpeak_v6/
+# Isolated candidate copies and their private integrity manifests.
+/.model-candidates/
+# Isolated candidate copies and their private integrity manifests.
+/.model-candidates/
+
 # Large model binaries (too big for GitHub, download separately)
 *.safetensors
 *.bin

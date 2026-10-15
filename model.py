@@ -23,6 +23,10 @@ _ADAPTER_FILES = (
     "vocab.json",
     "merges.txt",
 )
+_UNIFIED_ADAPTER_FILES = (
+    "adapter_config.json", "adapter_model.safetensors", "processor_config.json",
+    "tokenizer_config.json", "tokenizer.json",
+)
 
 
 class ModelUnavailableError(RuntimeError):
@@ -77,12 +81,28 @@ def resolve_adapter_path(model_path: str | Path | None = None) -> Path:
         configured_adapter_path(model_path),
         "iSpeak adapter",
     )
-    missing = [name for name in _ADAPTER_FILES if not (resolved / name).is_file()]
+    unified = (not all((resolved / name).is_file() for name in _ADAPTER_FILES)
+               and ((resolved / 'processor_config.json').is_file() or (resolved / 'tokenizer.json').is_file()))
+    required = _UNIFIED_ADAPTER_FILES if unified else _ADAPTER_FILES
+    missing = [name for name in required if not (resolved / name).is_file()]
     if missing:
         raise ModelUnavailableError(
             f"{resolved.name} adapter directory is incomplete: {resolved} "
             f"(missing: {', '.join(missing)})"
         )
+    if unified:
+        try:
+            processor = json.loads((resolved / 'processor_config.json').read_text(encoding='utf-8'))
+            tokenizer = json.loads((resolved / 'tokenizer.json').read_text(encoding='utf-8'))
+            features = processor['feature_extractor']
+            valid = (processor.get('processor_class') == 'WhisperProcessor'
+                     and features.get('feature_extractor_type') == 'WhisperFeatureExtractor'
+                     and features.get('sampling_rate') == 16000 and features.get('feature_size') == 80
+                     and tokenizer['model']['type'] == 'BPE')
+        except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
+            raise ModelUnavailableError('Unified Whisper processor/tokenizer metadata is invalid') from exc
+        if not valid:
+            raise ModelUnavailableError('Unified Whisper processor/tokenizer metadata is incompatible')
     return resolved
 
 

@@ -1,0 +1,79 @@
+{
+  "schema": 2,
+  "bundle_id": "ispeak-v6-isolated-candidate",
+  "files": [
+    {
+      "component": "adapter",
+      "file": "adapter_config.json",
+      "bytes": 1273,
+      "sha256": "df3eedc11b03464bf4334203e9e5c72c794b1169205b9e5b4c0ac93231cf0207"
+    },
+    {
+      "component": "adapter",
+      "file": "adapter_model.safetensors",
+      "bytes": 51957816,
+      "sha256": "3660206ff7f8273be420365769ec17021f4fac831b706dbf52ab8a0eaa8762d8"
+    },
+    {
+      "component": "adapter",
+      "file": "processor_config.json",
+      "bytes": 409,
+      "sha256": "8c648fa85aafc59a07435ed751322499bd4238b819ca9200ddd2b5ba4df50e68"
+    },
+    {
+      "component": "adapter",
+      "file": "tokenizer_config.json",
+      "bytes": 2126,
+      "sha256": "4b2b6e81ad540698fdc4d886670f12a4ff8ae32c0d29dca96fe4a423dc24c8be"
+    },
+    {
+      "component": "adapter",
+      "file": "tokenizer.json",
+      "bytes": 3931230,
+      "sha256": "2dc5eb81025a86f949b132d13eb962eaf92864e83ce3b9db15a47cc9dfd1e232"
+    },
+    {
+      "component": "base",
+      "file": "config.json",
+      "bytes": 1967,
+      "sha256": "e6a2b489da1b5aed65a8eb8d1e7466fa867ad5643a8bc138ba708bd56b2875c4"
+    },
+    {
+      "component": "base",
+      "file": "generation_config.json",
+      "bytes": 3868,
+      "sha256": "71565b8ef50d0bf7a1193ed4bbed195b94e70c18894d81bba2f1233dcec3ab53"
+    },
+    {
+      "component": "base",
+      "file": "model.safetensors",
+      "bytes": 966995080,
+      "sha256": "1d7734884874f1a1513ed9aa760a4f8e97aaa02fd6d93a3a85d27b2ae9ca596b"
+    },
+    {
+      "component": "filler",
+      "file": "config.json",
+      "bytes": 2262,
+      "sha256": "2264e00752606f3e7cc6505ee310d37a5ce80eb58d3ff936f47c788522d1fd79"
+    },
+    {
+      "component": "filler",
+      "file": "model.safetensors",
+      "bytes": 598449012,
+      "sha256": "00a806bb8b5617cb170aa366f7889cd61dc53c9370ddb6ac366546f6c27b29a7"
+    },
+    {
+      "component": "filler",
+      "file": "tokenizer.json",
+      "bytes": 3583228,
+      "sha256": "6c8aaa9a542084f2457eab775d4eeb51f92a70c0fd9de28d5edb0ddec3c08d30"
+    },
+    {
+      "component": "filler",
+      "file": "tokenizer_config.json",
+      "bytes": 357,
+      "sha256": "62206c1d997ad86d4def1c62e797eaac92442e90ebbb4aff1b6f8fbe67539e24"
+    }
+  ],
+  "adapter_format": "whisper-unified"
+}
