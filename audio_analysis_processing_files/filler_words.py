@@ -8,6 +8,7 @@ API. It expects a local Hugging Face token-classification model trained with
 from __future__ import annotations
 
 import os
+from audio_analysis_processing_files.word_alignment import reconstruct_words, word_tokens
 import threading
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Protocol
@@ -128,31 +129,10 @@ def filler_classifier_status() -> Dict[str, Any]:
 
 def _build_transcript(
     word_segments: List[Dict[str, Any]],
+    full_transcript=None,
 ) -> tuple[str, List[Dict[str, Any]]]:
     """Build text while retaining character-to-audio timestamp alignment."""
-    text_parts: List[str] = []
-    aligned_words: List[Dict[str, Any]] = []
-    cursor = 0
-
-    for segment in word_segments:
-        word = str(segment.get("text", "")).strip()
-        if not word:
-            continue
-        if text_parts:
-            text_parts.append(" ")
-            cursor += 1
-        char_start = cursor
-        text_parts.append(word)
-        cursor += len(word)
-        aligned_words.append({
-            "word": word,
-            "char_start": char_start,
-            "char_end": cursor,
-            "start": _timestamp(segment.get("start")),
-            "end": _timestamp(segment.get("end")),
-        })
-
-    return "".join(text_parts), aligned_words
+    return reconstruct_words(word_segments, full_transcript)
 
 
 def _timestamp(value: Any) -> float:
@@ -175,6 +155,7 @@ def _words_overlapping(
 def _classification_item(
     prediction: Dict[str, Any],
     aligned_words: List[Dict[str, Any]],
+    transcript=None,
 ) -> Dict[str, Any] | None:
     char_start = int(prediction.get("start", 0))
     char_end = int(prediction.get("end", char_start))
@@ -182,7 +163,7 @@ def _classification_item(
     if not words:
         return None
     return {
-        "word": " ".join(word["word"] for word in words),
+        "word": transcript[words[0]['char_start']:words[-1]['char_end']] if transcript is not None else " ".join(word["word"] for word in words),
         "start": round(min(word["start"] for word in words), 3),
         "end": round(max(word["end"] for word in words), 3),
         "confidence": round(float(prediction.get("score", 0.0)), 4),
@@ -190,9 +171,10 @@ def _classification_item(
     }
 
 
-def _unavailable_result(message: str, total_words: int) -> Dict[str, Any]:
+def _unavailable_result(message: str, total_words: int, code: str = "classifier_unavailable") -> Dict[str, Any]:
     return {
         "analysis_available": False,
+        "failure": {"code": code},
         "filler_count": 0,
         "filler_rate": 0.0,
         "filler_words": [],
@@ -204,10 +186,11 @@ def _unavailable_result(message: str, total_words: int) -> Dict[str, Any]:
     }
 
 
-def analyze_fillers(
+def _analyze_fillers(
     word_segments: List[Dict[str, Any]],
     classifier: TokenClassifier | Callable[[str], List[Dict[str, Any]]] | None = None,
     minimum_confidence: float = MINIMUM_MODEL_CONFIDENCE,
+    full_transcript=None,
     **_: Any,
 ) -> Dict[str, Any]:
     """Classify words from their full context using a local model.
@@ -216,8 +199,9 @@ def analyze_fillers(
     confidence threshold are returned as uncertain candidates and do not lower
     the filler score.
     """
-    transcript, aligned_words = _build_transcript(word_segments)
-    if not aligned_words:
+    transcript, aligned_words = _build_transcript(word_segments, full_transcript)
+    total_words = len(word_tokens(transcript))
+    if not total_words:
         return {
             "analysis_available": True,
             "filler_count": 0,
@@ -234,11 +218,12 @@ def analyze_fillers(
         active_classifier = classifier or _default_classifier()
         predictions = active_classifier(transcript)
     except ClassifierUnavailable as exc:
-        return _unavailable_result(str(exc), len(aligned_words))
+        return _unavailable_result(str(exc), total_words)
     except Exception as exc:
         return _unavailable_result(
-            f"Local filler classification failed: {exc}",
-            len(aligned_words),
+            "Local filler classification failed",
+            total_words,
+            "classifier_inference_failed",
         )
 
     fillers: List[Dict[str, Any]] = []
@@ -250,7 +235,7 @@ def analyze_fillers(
         )
         if label not in {"FILLER", "UNCERTAIN"}:
             continue
-        item = _classification_item(prediction, aligned_words)
+        item = _classification_item(prediction, aligned_words, transcript)
         if item is None:
             continue
         key = (item["start"], item["end"], item["word"].lower())
@@ -266,7 +251,7 @@ def analyze_fillers(
     fillers.sort(key=lambda item: item["start"])
     uncertain.sort(key=lambda item: item["start"])
     filler_count = len(fillers)
-    filler_rate = round(filler_count / len(aligned_words) * 100, 1)
+    filler_rate = round(filler_count / total_words * 100, 1)
     filler_score = round(max(0.0, 100.0 - filler_rate * 4.0))
 
     return {
@@ -276,7 +261,7 @@ def analyze_fillers(
         "filler_words": fillers,
         "filler_candidates": uncertain,
         "filler_score": filler_score,
-        "total_words": len(aligned_words),
+        "total_words": total_words,
         "message": "No filler words detected" if filler_count == 0 else (
             "Minimal filler-word usage" if filler_rate < 5 else
             "Moderate filler-word usage" if filler_rate < 15 else
@@ -284,3 +269,29 @@ def analyze_fillers(
         ),
         "method": "local contextual token-classification model",
     }
+
+
+def analyze_fillers(word_segments, classifier=None,
+                    minimum_confidence=MINIMUM_MODEL_CONFIDENCE,
+                    full_transcript=None, **kwargs):
+    """Preserve detection behavior and describe coverage without storing extra text."""
+    reconstructed, _ = _build_transcript(word_segments, full_transcript)
+    tokens = word_tokens
+    coverage = "unknown" if full_transcript is None else (
+        "matched" if tokens(reconstructed) == tokens(full_transcript) else "mismatch"
+    )
+    try:
+        result = _analyze_fillers(word_segments, classifier, minimum_confidence, full_transcript=full_transcript, **kwargs)
+    except Exception:
+        result = _unavailable_result("Local filler output could not be decoded",
+                                     len(tokens(reconstructed)), "classifier_output_invalid")
+    # Error details can contain local paths; expose stable codes instead.
+    if not result["analysis_available"]:
+        result["message"] = "Filler-word analysis unavailable"
+    result.update({"count_unit": "grouped_spans", "threshold": minimum_confidence,
+                   "candidate_count": len(result["filler_candidates"]),
+                   "failure": result.get("failure"),
+                   "coverage": {"status": coverage,
+                                "classifier_word_count": len(tokens(reconstructed)),
+                                "transcript_word_count": None if full_transcript is None else len(tokens(full_transcript))}})
+    return result

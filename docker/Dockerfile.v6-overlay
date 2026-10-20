@@ -1,0 +1,8 @@
+# Reuse the verified private RC1 dependency and v6 model layers.
+FROM ghcr.io/apol-bit/ispeak-python@sha256:a938fb342d2ef69ad0e6110b4031d41b7ddc9628311f2f50788922a2c034c05e
+
+WORKDIR /app
+COPY fastapi_backend.py model.py whisper_service.py audio_validation.py analysis_admission.py assessment_details.py ./
+COPY audio_analysis_processing_files/ ./audio_analysis_processing_files/
+# Inherit nonroot execution, offline v6 paths, integrity entrypoint and healthcheck.
+# PORT retains precedence over ISPEAK_PORT in the inherited one-worker command.

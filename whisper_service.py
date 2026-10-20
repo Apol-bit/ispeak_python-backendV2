@@ -4,8 +4,9 @@ from __future__ import annotations
 import numpy as np
 import logging
 import os
+from contextlib import contextmanager
 import librosa
-from audio_validation import MIN_RMS, load_valid_audio, validate_audio, validate_transcript
+from audio_validation import MIN_RMS, SpeechValidationError, load_valid_audio, validate_audio, validate_transcript
 from difflib import SequenceMatcher
 from typing import Any, Dict, List
 
@@ -14,6 +15,7 @@ from audio_analysis_processing_files.articulation import (
     compare_reference_enunciation,
 )
 from audio_analysis_processing_files.filler_words import analyze_fillers
+from assessment_details import assessment_details
 from audio_analysis_processing_files.speaking_rate import analyze_speaking_rate
 from audio_analysis_processing_files.vocal_variety import (
     analyze_frequency_pitch,
@@ -22,6 +24,17 @@ from audio_analysis_processing_files.vocal_variety import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+@contextmanager
+def _validation_stage(role, stage):
+    """Log only fixed processing labels and validation codes, never audio/text."""
+    try:
+        yield
+    except SpeechValidationError as exc:
+        logger.warning('audio_validation_failed role=%s stage=%s code=%s',
+                       role, getattr(exc, 'validation_stage', stage), exc.code)
+        raise
 
 
 def _log_transcription(text, words):
@@ -159,6 +172,7 @@ def _run_analysis(
     sr: int,
     model,
     language: str = "English",
+    audio_role: str = "user",
 ) -> Dict[str, Any]:
     """
     Core analysis logic shared by both standard and reference-based analysis.
@@ -166,7 +180,8 @@ def _run_analysis(
     Returns analysis for usable speech; invalid input raises SpeechValidationError.
     """
 
-    audio_duration = validate_audio(y, sr)
+    with _validation_stage(audio_role, 'signal_validation'):
+        audio_duration = validate_audio(y, sr)
     y_original = y.copy()
 
     # ---------- TRANSCRIBE ----------
@@ -187,7 +202,9 @@ def _run_analysis(
     segments: List[Dict[str, Any]] = transcription.get("segments", [])
 
     word_segments = _extract_word_segments(segments)
-    validate_transcript(text, word_segments, audio_duration)
+    with _validation_stage(audio_role, 'transcript_validation'):
+        validate_transcript(text, word_segments, audio_duration,
+                            language=language, audio_role=audio_role)
 
     _log_transcription(text, word_segments)
 
@@ -218,7 +235,7 @@ def _run_analysis(
 
     # ---------- PACING ----------
     try:
-        pacing_stats = analyze_speaking_rate(word_segments, audio_duration)
+        pacing_stats = analyze_speaking_rate(word_segments, audio_duration, full_transcript=text)
         pacing_stats["total_pause_seconds"] = pause_stats["total_pause_seconds"]
         pacing_score = _compute_pacing_score(pacing_stats)
     except ValueError as e:
@@ -231,7 +248,7 @@ def _run_analysis(
     pronunciation_score = float(articulation_stats.get("articulation_score", 0))
 
     # ---------- FILLER ----------
-    filler_stats = analyze_fillers(word_segments)
+    filler_stats = analyze_fillers(word_segments, full_transcript=text)
     raw_filler_score = filler_stats.get("filler_score")
     filler_score = (
         float(raw_filler_score)
@@ -306,18 +323,25 @@ def _run_analysis(
             "words":   [
                 {
                     "word":  fw.get("word", ""),
+                    "confidence": fw.get("confidence"),
                     "start": round(fw.get("start", 0.0), 3),
                     "end":   round(fw.get("end", 0.0), 3),
                 }
                 for fw in filler_stats.get("filler_words", [])
             ],
             "candidates": filler_stats.get("filler_candidates", []),
+            "candidate_count": filler_stats.get("candidate_count", 0),
+            "count_unit": filler_stats.get("count_unit", "grouped_spans"),
+            "threshold": filler_stats.get("threshold", 0.60),
+            "failure": filler_stats.get("failure"),
+            "coverage": filler_stats.get("coverage"),
             "message": filler_stats.get("message", ""),
             "method": filler_stats.get("method", ""),
         },
         # Internal â€” used by reference comparison
         "_internal": {
             "energy_stats": energy_stats,
+            "energy_rule_base": _compute_energy_score({**energy_stats, "temporal_pauses": {}}),
             "pacing_stats": pacing_stats,
             "pacing_score": pacing_score,
             "clarity_score": clarity_score,
@@ -332,6 +356,7 @@ def generate_full_analysis(
     file_path: str,
     model,
     language: str = "English",
+    max_duration_seconds: float = 300,
 ) -> Dict[str, Any]:
     """
     Run full speech analysis on an audio file (standard mode, no reference).
@@ -343,10 +368,12 @@ def generate_full_analysis(
     """
 
     # ---------- LOAD AUDIO ----------
-    y, sr = load_valid_audio(file_path)
+    with _validation_stage('user', 'decode'):
+        y, sr = load_valid_audio(file_path, max_duration_seconds)
     sr = int(sr)
 
     result = _run_analysis(file_path, y, sr, model, language)
+    result['assessment_details'] = assessment_details(result)
 
     # Remove internal data before returning
     result.pop("_internal", None)
@@ -359,6 +386,7 @@ def generate_reference_analysis(
     reference_path: str,
     model,
     language: str = "English",
+    max_duration_seconds: float = 300,
 ) -> Dict[str, Any]:
     """
     Run reference-based speech analysis.
@@ -376,20 +404,34 @@ def generate_reference_analysis(
     logger.info("=== REFERENCE-BASED ANALYSIS ===")
 
     # ---------- LOAD BOTH AUDIO FILES ----------
-    y_user, sr = load_valid_audio(user_path)
-    y_ref, sr_ref = load_valid_audio(reference_path)
+    with _validation_stage('user', 'decode'):
+        y_user, sr = load_valid_audio(user_path, max_duration_seconds)
     sr = int(sr)
-    sr_ref = int(sr_ref)
-
-    # ---------- ANALYZE BOTH ----------
-    logger.info("Analyzing reference audio...")
-    ref_result = _run_analysis(reference_path, y_ref, sr_ref, model, language)
+    # Reference comparison is optional: scripts without reference audio already
+    # use the standard assessment. Only validation failures permit this fallback;
+    # model, storage and unexpected runtime failures must still propagate.
+    ref_result = None
+    try:
+        with _validation_stage('reference', 'decode'):
+            y_ref, sr_ref = load_valid_audio(reference_path)
+        sr_ref = int(sr_ref)
+        logger.info("Analyzing reference audio...")
+        ref_result = _run_analysis(reference_path, y_ref, sr_ref, model, language, audio_role='reference')
+    except SpeechValidationError:
+        logger.warning('reference_comparison_unavailable reason=reference_validation_failed')
 
     logger.info("Analyzing user audio...")
     user_result = _run_analysis(user_path, y_user, sr, model, language)
 
     # If either analysis returned silence, return the user result as-is
-    if not user_result.get("_internal") or not ref_result.get("_internal"):
+    if ref_result is None or not user_result.get("_internal") or not ref_result.get("_internal"):
+        user_result['articulation']['clear_enunciation']['reference_comparison'] = {
+            'available': False, 'applied': False,
+            'message': 'Reference comparison unavailable; standard user-speech assessment used.',
+        }
+        user_result['assessment_details'] = assessment_details(user_result)
+        user_result['assessment_details']['fallback']['referencePacing'] = True
+        user_result['assessment_details']['completeness'] = 'partial'
         user_result.pop("_internal", None)
         return user_result
 
@@ -438,6 +480,7 @@ def generate_reference_analysis(
     base_enunciation = float(
         user_articulation.get("clear_enunciation", {}).get("enunciation_score", 0)
     )
+    enunciation_comparison['base_enunciation_score'] = base_enunciation
     if enunciation_comparison.get("available") and transcript_similarity >= 0.60:
         reference_score = float(enunciation_comparison["score"])
         adjusted_enunciation = round(base_enunciation * 0.40 + reference_score * 0.60, 1)
@@ -488,6 +531,7 @@ def generate_reference_analysis(
     user_result["vocal_variety"]["score"] = ref_energy_score if pitch_available else None
     user_result["speaking_rate"]["reference_wpm"] = ref_wpm
     user_result["scores"]["overall"] = ref_overall
+    user_result['assessment_details'] = assessment_details(user_result)
 
     # Clean up internal data
     user_result.pop("_internal", None)

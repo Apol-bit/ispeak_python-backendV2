@@ -26,7 +26,7 @@ RUN python -m pip install --index-url https://download.pytorch.org/whl/cpu torch
     && python -m pip install -r requirements-linux.txt \
     && python -m pip check
 
-COPY fastapi_backend.py model.py whisper_service.py audio_validation.py analysis_admission.py ./
+COPY fastapi_backend.py model.py whisper_service.py audio_validation.py analysis_admission.py assessment_details.py ./
 COPY audio_analysis_processing_files/ ./audio_analysis_processing_files/
 COPY models/iSpeak_v5/base_model/ ./models/iSpeak_v5/base_model/
 COPY models/filler_classifier/ ./models/filler_classifier/

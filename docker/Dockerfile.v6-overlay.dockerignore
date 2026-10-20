@@ -1,0 +1,13 @@
+# Dockerfile-specific context allowlist. No weights, secrets or test artifacts.
+**
+!fastapi_backend.py
+!model.py
+!whisper_service.py
+!audio_validation.py
+!analysis_admission.py
+!assessment_details.py
+!audio_analysis_processing_files/
+!audio_analysis_processing_files/**/*.py
+!audio_analysis_processing_files/*.py
+**/__pycache__/
+**/*.pyc

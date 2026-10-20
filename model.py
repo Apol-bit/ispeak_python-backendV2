@@ -9,6 +9,28 @@ from typing import Any
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
+
+
+def validate_local_audio_uat(env=None):
+    """Opt-in guard only; performs no model loading or network access."""
+    env = os.environ if env is None else env
+    flag = env.get('ISPEAK_LOCAL_AUDIO_UAT')
+    if flag in (None, 'false'):
+        return False
+    expected = {
+        'ISPEAK_ENV': 'development', 'ISPEAK_HOST': '127.0.0.1',
+        'ISPEAK_PORT': '8000', 'ISPEAK_MODEL_PATH': 'models/iSpeak_v6',
+        'ISPEAK_BASE_MODEL_PATH': 'models/iSpeak_v5/base_model',
+        'ISPEAK_FILLER_MODEL_PATH': 'models/filler_classifier',
+        'ISPEAK_MODEL_MANIFEST': 'model_manifests/ispeak-v6.json',
+        'HF_HUB_OFFLINE': '1', 'TRANSFORMERS_OFFLINE': '1',
+    }
+    if (flag != 'true' or any(env.get(k) != v for k, v in expected.items())
+            or env.get('PORT', '8000') != '8000'
+            or len(env.get('ISPEAK_SERVICE_TOKEN', '')) < 32):
+        raise RuntimeError('Invalid isolated local audio UAT configuration')
+    return True
+
 DEFAULT_MODEL_NAME = "iSpeak_v5"
 DEFAULT_SPEECH_MODEL_PATH = PROJECT_ROOT / "models" / DEFAULT_MODEL_NAME
 DEFAULT_BASE_MODEL_PATH = DEFAULT_SPEECH_MODEL_PATH / "base_model"
@@ -297,8 +319,10 @@ class ISpeakWhisper:
             for word in words:
                 word_result = {
                     "word": word,
-                    "start": round(current_start, 3),
-                    "end": round(current_start + word_duration, 3),
+                    # Validate original precision: millisecond rounding can
+                    # collapse a positive ASR interval into a zero-length word.
+                    "start": current_start,
+                    "end": current_start + word_duration,
                     "probability": confidence,
                 }
                 formatted_words.append(word_result)
@@ -308,8 +332,8 @@ class ISpeakWhisper:
             formatted_segments.append(
                 {
                     "text": phrase,
-                    "start": round(start, 3),
-                    "end": round(end, 3),
+                    "start": start,
+                    "end": end,
                     "words": segment_words,
                 }
             )

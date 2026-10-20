@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import re
+from audio_analysis_processing_files.word_alignment import reconstruct_words, word_tokens
 from typing import Any, Dict, List
 
 
@@ -27,6 +27,7 @@ def analyze_speaking_rate(
     audio_duration_seconds: float,
     slow_wpm: int = 120,
     fast_wpm: int = 150,
+    full_transcript=None,
 ) -> Dict[str, Any]:
     """Calculate words per total minute and words per active speaking minute."""
     if audio_duration_seconds <= 0:
@@ -38,10 +39,8 @@ def analyze_speaking_rate(
             "pacing_status": "Insufficient speech",
         }
 
-    total_words = sum(
-        len(re.findall(r"[\w'-]+", str(segment.get("text", "")), re.UNICODE))
-        for segment in word_segments
-    )
+    reconstructed, _ = reconstruct_words(word_segments, full_transcript)
+    total_words = len(word_tokens(reconstructed))
     if total_words == 0:
         return {
             "wpm": 0.0,

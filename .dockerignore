@@ -8,6 +8,7 @@
 !whisper_service.py
 !audio_validation.py
 !analysis_admission.py
+!assessment_details.py
 !model_integrity.py
 !model_manifests/
 !model_manifests/*.json

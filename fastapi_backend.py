@@ -18,9 +18,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from audio_analysis_processing_files.filler_words import filler_classifier_status, _default_classifier
 from analysis_admission import AnalysisAdmission, AdmissionFull, AdmissionTimeout, finish_thread_on_cancel
-from model import DEFAULT_MODEL_NAME, ModelUnavailableError, load_model
+from model import DEFAULT_MODEL_NAME, ModelUnavailableError, load_model, validate_local_audio_uat
+validate_local_audio_uat()
 from whisper_service import generate_full_analysis, generate_reference_analysis
-from audio_validation import SpeechValidationError
+from audio_validation import SpeechValidationError, duration_limit, declared_duration
 
 ALLOWED_EXTENSIONS = {".wav", ".mp3", ".m4a", ".flac", ".ogg", ".aac"}
 MAX_UPLOAD_MB = int(os.getenv("ISPEAK_MAX_UPLOAD_MB", "25"))
@@ -254,7 +255,7 @@ async def _transcribe(request: Request, response: Response):
         )
 
     try:
-        form = await request.form(max_files=2, max_fields=4)
+        form = await request.form(max_files=2, max_fields=6)
     except (AssertionError, RuntimeError) as exc:
         raise HTTPException(
             status_code=503,
@@ -266,6 +267,12 @@ async def _transcribe(request: Request, response: Response):
     language = str(form.get("language") or "English")
     if language not in {"English", "Filipino", "Taglish"}:
         raise HTTPException(status_code=400, detail="Unsupported language")
+    try:
+        maximum = duration_limit(form.get('max_duration_seconds', 300))
+        declared_duration(form.get('duration_seconds'), maximum)
+    except (SpeechValidationError, TypeError, ValueError) as exc:
+        code = exc.code if isinstance(exc, SpeechValidationError) else 'invalid_duration'
+        raise HTTPException(status_code=400, detail={'code': code, 'message': 'Invalid or excessive recording duration.'}) from exc
     if reference_audio is not None:
         reference_audio = _require_upload(reference_audio, "reference_audio")
 
@@ -287,10 +294,11 @@ async def _transcribe(request: Request, response: Response):
                 work = run_in_threadpool(
                     generate_reference_analysis, temp_path, ref_temp_path,
                     app.state.model, language,
+                    maximum,
                 )
             else:
                 work = run_in_threadpool(
-                    generate_full_analysis, temp_path, app.state.model, language,
+                    generate_full_analysis, temp_path, app.state.model, language, maximum,
                 )
             result = await finish_thread_on_cancel(work)
             response.headers["X-Analysis-Queue-Wait-Ms"] = f"{queue_wait_ms:.3f}"
@@ -303,6 +311,7 @@ async def _transcribe(request: Request, response: Response):
         raise
     except SpeechValidationError as exc:
         admission.failed += 1
+        logger.warning("audio_validation_failed code=%s", exc.code)
         raise HTTPException(status_code=400, detail={"code": exc.code, "message": exc.message}) from exc
     except HTTPException:
         raise
