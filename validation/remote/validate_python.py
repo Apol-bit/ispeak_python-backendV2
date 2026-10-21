@@ -2,20 +2,35 @@
 import hashlib
 import json
 import secrets
-import shutil
+import io
+import wave
 import time
+
+from pathlib import Path
 
 from preflight import enforce
 
 
+FIXTURE = Path(__file__).with_name('fixtures') / 'synthetic-english.wav'
+FIXTURE_SHA256 = '7ede124df41c08cbffd7f40e00e85887d8ebb08fadb7e1d19b4373b7b2f7bcad'
+
+
+def fixture_bytes():
+    if not FIXTURE.is_file() or FIXTURE.is_symlink():
+        raise RuntimeError('Approved synthetic speech fixture unavailable')
+    data = FIXTURE.read_bytes()
+    if len(data) != 452176 or hashlib.sha256(data).hexdigest() != FIXTURE_SHA256:
+        raise RuntimeError('Approved synthetic speech fixture integrity mismatch')
+    with wave.open(io.BytesIO(data), 'rb') as wav:
+        if (wav.getnchannels(), wav.getsampwidth(), wav.getframerate(), wav.getnframes(), wav.getcomptype()) != (1, 2, 22050, 226065, 'NONE'):
+            raise RuntimeError('Approved synthetic speech fixture format mismatch')
+    return data
+
+
 def validate(v, _repo, context):
     enforce('python', stable=True)  # Separate runtime headroom gate.
-    speech = shutil.which('espeak-ng') or shutil.which('espeak')
-    if not speech:
-        raise RuntimeError('Synthetic speech tool unavailable; no installation or human recording fallback')
     wav = v.root / 'synthetic.wav'
-    v.command([speech, '-s', '135', '-w', str(wav),
-               'This is a short speech recording for a safe system validation.'], seconds=20)
+    wav.write_bytes(fixture_bytes())
     wav.chmod(0o644)
     code = """import hashlib,json,pathlib,subprocess,sys
 expected=json.loads(sys.argv[1])

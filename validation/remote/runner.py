@@ -232,8 +232,8 @@ class Validation:
         if self.role == 'python':
             from node_gate import require_node_success
             require_node_success()  # Before private pulls, builder startup, or inference.
-            if not (shutil.which('espeak-ng') or shutil.which('espeak')):
-                raise RuntimeError('Synthetic speech tool unavailable; no automatic installation')
+            from validate_python import fixture_bytes
+            fixture_bytes()  # Integrity check before private pulls or builder startup.
         enforce(self.role, stable=True)  # Before source fetch, registry pull, builder bootstrap.
         self.monitor = True
         repo, context = export(self.role, self.root, self.command)

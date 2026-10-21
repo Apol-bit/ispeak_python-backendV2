@@ -177,5 +177,28 @@ class FrozenNodeGate(unittest.TestCase):
             get.assert_not_called()
 
 
+class SyntheticAudioFixture(unittest.TestCase):
+    def test_frozen_synthetic_fixture(self):
+        import validate_python
+        self.assertEqual(len(validate_python.fixture_bytes()),452176)
+
+    def test_missing_and_tampered_fixture_rejected(self):
+        import validate_python
+        with tempfile.TemporaryDirectory() as temp:
+            path=Path(temp)/'synthetic.wav'
+            with patch.object(validate_python,'FIXTURE',path):
+                with self.assertRaises(RuntimeError):validate_python.fixture_bytes()
+                path.write_bytes(b'not the approved recording')
+                with self.assertRaises(RuntimeError):validate_python.fixture_bytes()
+
+    def test_inference_acceptance_unchanged(self):
+        import ast
+        import validate_python
+        source=Path(validate_python.__file__).read_text()
+        self.assertNotIn('espeak',source)
+        self.assertIn("assert status==200",source)
+        self.assertIn("assert status==400 and json.loads(body)['detail']['code']=='recording_too_long'",source)
+
+
 if __name__ == '__main__':
     unittest.main()
