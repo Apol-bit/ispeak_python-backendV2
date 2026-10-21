@@ -1,0 +1,49 @@
+name: Frozen Python source-only overlay validation
+on:
+  push:
+    branches: [ci/validate-python-a76c6f47-20261021]
+    paths: [.github/workflows/validate-python.yml, validation/remote/**]
+permissions:
+  contents: read
+  packages: read
+concurrency:
+  group: frozen-python-validation
+  cancel-in-progress: false
+jobs:
+  python-candidate:
+    if: github.repository == 'Apol-bit/ispeak_python-backendV2' && github.actor == 'Apol-bit' && github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      ROLE: python
+      BUILDKIT_IMAGE: moby/buildkit@sha256:99368f3e46177c6405b9740e4461d91cee004128daeecca78d4ceac50ec1da5c
+      AUTOMATION_REVIEW_APPROVED: 'false'
+      EXPORT_LOAD_CONTROLS_APPROVED: 'false'
+      # Exact successful Node automation commit/run, supplied after Node validation.
+      NODE_VALIDATION_RUN_ID: REVIEW_REQUIRED
+      NODE_AUTOMATION_SHA: REVIEW_REQUIRED
+      ACTIONS_STEP_DEBUG: 'false'
+    steps:
+      - name: Fetch reviewed automation without persistent credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = push
+          test "$GITHUB_REF" = refs/heads/ci/validate-python-a76c6f47-20261021
+          test "$AUTOMATION_REVIEW_APPROVED" = true
+          export GIT_TERMINAL_PROMPT=0
+          git -c core.hooksPath=/dev/null init automation >/dev/null
+          git -C automation remote add origin https://github.com/Apol-bit/ispeak_python-backendV2.git
+          git -C automation -c core.hooksPath=/dev/null fetch --depth=1 origin "$GITHUB_SHA" >/dev/null 2>&1
+          git -C automation -c core.hooksPath=/dev/null checkout --detach FETCH_HEAD >/dev/null 2>&1
+          test "$(git -C automation rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Validate frozen Python overlay after Node success
+        shell: bash
+        env:
+          GHCR_READ_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 automation/validation/remote/runner.py python
+      - name: Remove only run-owned containers and private temporary files
+        if: always()
+        shell: bash
+        run: |
+          test ! -f automation/validation/remote/runner.py || python3 automation/validation/remote/runner.py cleanup

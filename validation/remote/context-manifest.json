@@ -1,0 +1,361 @@
+{
+  "built": false,
+  "published": false,
+  "deployed": false,
+  "contexts": {
+    "node": {
+      "commit": "dfa3138f76bb25fa83d0ca61adf4cc256b53fa6c",
+      "files": [
+        {
+          "path": ".dockerignore",
+          "bytes": 716,
+          "sha256": "69bad3ac7976082a10875679f8f818f1712f523f5d218114086d1214d58fdc31",
+          "gitBlob": "f0db746af5cf907ca0671934859e8dede17a76a2"
+        },
+        {
+          "path": "Dockerfile",
+          "bytes": 813,
+          "sha256": "46807bda9fb743eac7493c7565e9ddee05a0d79b4a9d41078e482fff11d07d1a",
+          "gitBlob": "15f5f3018f842b19c237b1abfac8519bac1dcb18"
+        },
+        {
+          "path": "controllers/authController.js",
+          "bytes": 5121,
+          "sha256": "43eb91567e6b0cf6caa08b7a326e69f32f41028f81dca80169d68aed4601d05a",
+          "gitBlob": "d6777ffbdea91604696e02c87ccc5f3e88a1e64a"
+        },
+        {
+          "path": "controllers/resourceController.js",
+          "bytes": 11471,
+          "sha256": "37edec71e395717cd645ef4bd110956f3edaa9ae01e34379c6a1632c21adfeae",
+          "gitBlob": "8a2c7a2b35221e5c91e48a8ac4339f32731e38f5"
+        },
+        {
+          "path": "controllers/sessionController.js",
+          "bytes": 13544,
+          "sha256": "e7887ea3d155a381a185394983d16199725554bd68c0d07edda1d850d788bccb",
+          "gitBlob": "4b2ecc5983e4585290bf920b522c0673c3090446"
+        },
+        {
+          "path": "controllers/userController.js",
+          "bytes": 7686,
+          "sha256": "9e1e8c07bc45563c7fafbbe4072f98a8e52d839346f0b8728d928a360ccd0968",
+          "gitBlob": "904a02ce8f8db28f191c04f024110d4b8c68a03e"
+        },
+        {
+          "path": "docker/entrypoint.sh",
+          "bytes": 70,
+          "sha256": "7226d86972f11c5188d94a4a054e883871b55beb0b433f4a75a7a0737f1e598b",
+          "gitBlob": "1518538111a26322ad730cae2b567e8ef895b196"
+        },
+        {
+          "path": "docker/validateConfiguration.js",
+          "bytes": 1237,
+          "sha256": "d53fe31f99ff77b44eb5b0218c85ee60d1600f5f5339db5461c9092bfd42161e",
+          "gitBlob": "2f31a2261cdd94eed80b0d26f510ec1bb7fa3fc7"
+        },
+        {
+          "path": "middleware/analysisAdmission.js",
+          "bytes": 1404,
+          "sha256": "a0eb12dc1a4e7264ea3f9df8a50fc466300dd10ac3179178d8fd3322ae35ef2e",
+          "gitBlob": "8d89ee323dff417580cc1deeabe5245e90f9125c"
+        },
+        {
+          "path": "middleware/auth.js",
+          "bytes": 3242,
+          "sha256": "58514ea357506cb45d53482724cde5a1065b65743c828d95c9509cc9499b7847",
+          "gitBlob": "a94f108c329182895b3d2af36376cacd32d61a13"
+        },
+        {
+          "path": "middleware/rateLimit.js",
+          "bytes": 1120,
+          "sha256": "cd0267b070ebda88639d697263f3bb296d5deacc0450d6a171c22c49e700249c",
+          "gitBlob": "4a2c673f6791c8f71d318bec7fb688c83ed0a421"
+        },
+        {
+          "path": "models/LearningResource.js",
+          "bytes": 2340,
+          "sha256": "228ea86da57fade8d98bd03e5df63aca8f3342badf17207d3d44292788624746",
+          "gitBlob": "d17f648e37b0a03c313dd02cadf61404e0e68e6b"
+        },
+        {
+          "path": "models/SpeechSession.js",
+          "bytes": 5332,
+          "sha256": "9e18d4e18fc15efc018acb31063bf96c0f9a6323596b513c712cc9da1cc63443",
+          "gitBlob": "c2e99997ee2f660b64972e4ed6d4e29446625198"
+        },
+        {
+          "path": "models/StorageCleanup.js",
+          "bytes": 669,
+          "sha256": "b830e4b661a94982ae7bd03fa6af7883acfe0772247400db184974cc17d4c768",
+          "gitBlob": "0b7342ffa7da2b091e306a90b89f3838033960fb"
+        },
+        {
+          "path": "models/User.js",
+          "bytes": 1400,
+          "sha256": "bb21542aba739a5f2ce60739f2b6718974919dff02cf30fd30d5220eabe0fa5a",
+          "gitBlob": "17dd007e8cb1111ba654062fa0142e1837c36367"
+        },
+        {
+          "path": "package-lock.json",
+          "bytes": 99366,
+          "sha256": "ff9eb8427263ad299b3bc496bd919fa5c831e24c378048cda38806b5cb26fcc9",
+          "gitBlob": "b08c609763b3f6f055376293e229beba538d0cc1"
+        },
+        {
+          "path": "package.json",
+          "bytes": 593,
+          "sha256": "9372d76fc6da995e24564556a9cc1ca44042387a8b7ac96c25cf88b0d2691db5",
+          "gitBlob": "ee19cb13bf07f9f38878e5a3c544fc65a2492e9e"
+        },
+        {
+          "path": "routes/authRoutes.js",
+          "bytes": 771,
+          "sha256": "8681f39683e4634c0cfb9683be8d2f5bc56e09f84fb85755ca7d7e7fdc800776",
+          "gitBlob": "2a837f08b82cb3265045899bc4dac7bebd2b9bd9"
+        },
+        {
+          "path": "routes/resourceRoutes.js",
+          "bytes": 2364,
+          "sha256": "7a1222c78acc84e0817a35979da987c91f3b4d0c47ae9a3cb111c86248714910",
+          "gitBlob": "d3a7593504ff6b0f2b57c7a00858aa339a3e93ae"
+        },
+        {
+          "path": "routes/sessionRoutes.js",
+          "bytes": 2416,
+          "sha256": "6e07a27385d596f65a7fc20a6716a3ac7c45047ab5e7c58e8c3389f89876b9ef",
+          "gitBlob": "25873e7bcbfff1fbec1ef1a24e7d704f1e86643a"
+        },
+        {
+          "path": "routes/userRoutes.js",
+          "bytes": 1084,
+          "sha256": "d6db5cda65fe91b95acb4095d1cea6a6419e14f295b85777a6d5c4d7a965c613",
+          "gitBlob": "2339b6fa11975d666bb11a870f5a13845a23219d"
+        },
+        {
+          "path": "server.js",
+          "bytes": 6906,
+          "sha256": "f29a7840cf0d3c84afed318c57276346dc903c8cd92259ab53164cad02480289",
+          "gitBlob": "8386b8c30a4d9791b7bd5c98298db88a03918601"
+        },
+        {
+          "path": "services/analysisResponse.js",
+          "bytes": 5255,
+          "sha256": "bb763e339815083f45b92ec5c59aae38fe4064c62b85475b2fc202acfc4139c4",
+          "gitBlob": "3fc2faf8c46b70198311c810ad010ca79e7a625e"
+        },
+        {
+          "path": "services/assessmentDetails.js",
+          "bytes": 3594,
+          "sha256": "eace8b2333d45f60c5607effcdbe3ac1fe9251a38bb336462c24379a9f03e5a4",
+          "gitBlob": "b4ed87240341456ac8a165ec52949b0a855dae2f"
+        },
+        {
+          "path": "services/audioFile.js",
+          "bytes": 2080,
+          "sha256": "b79ee2cd8249aa709a92360e104358b3b049de1a6a765b5ab0565dd95aeb4034",
+          "gitBlob": "640f58c7b0d4b45fc5b4021a5620196e302c08e5"
+        },
+        {
+          "path": "services/audioStorageService.js",
+          "bytes": 4963,
+          "sha256": "fa154cbeb9982e0193208747ed842c2de9898c9c2edb0f60d31573bb62828679",
+          "gitBlob": "2e484a9f98bb559be46232b784967c037c5e5a62"
+        },
+        {
+          "path": "services/fillerAnalysis.js",
+          "bytes": 2240,
+          "sha256": "85a2a18e69e5972f57ccd264a40089b71cfd2e0a0d07be454dd0e3b24babf88b",
+          "gitBlob": "be0feff2c7924996308db495944e8c0e65d5b837"
+        },
+        {
+          "path": "services/localAudioUat.js",
+          "bytes": 1746,
+          "sha256": "4d5f225984d02b47351cbef34ec3f090583a61a42edb6ae22fa3615adb4dfece",
+          "gitBlob": "b527e23f8ef59551f59793325c1ca978a333cf79"
+        },
+        {
+          "path": "services/performanceStatistics.js",
+          "bytes": 2322,
+          "sha256": "13d0912a60f3afb988124aaf590a0af9bfc9e5a805a9e6d00b11f7a11d9812bc",
+          "gitBlob": "9e931c326f9343345fa9dd76956ec1515e2e8648"
+        },
+        {
+          "path": "services/readOnlyStartup.js",
+          "bytes": 1631,
+          "sha256": "8622aaf69e22f25464df86e3baffb633c2d8a5b3f484d8486b3eb4bdefa936ee",
+          "gitBlob": "e80876154d13247251edd48988ce66d3c33e127a"
+        },
+        {
+          "path": "services/recordingDuration.js",
+          "bytes": 1570,
+          "sha256": "abc7b3ef0888013cdc0ea6e0b574c9a82679eaa901c87788fedc9e9dcc4332f1",
+          "gitBlob": "98229114b733e1526c1e69bebd1d4cc4aed02a24"
+        },
+        {
+          "path": "services/registrationPolicy.js",
+          "bytes": 592,
+          "sha256": "f8c052a73837a5fc56376d5fe0b1c4674ab136c1c385d93bebbc3ede05def857",
+          "gitBlob": "7bcd8b9145a357e154c6d7f923afbe0dc81269bf"
+        },
+        {
+          "path": "services/retentionService.js",
+          "bytes": 1524,
+          "sha256": "9bf896412aa3ce8e77b57756c3254e17d945ee6fac6c5f7f4775bee69d47c5e7",
+          "gitBlob": "5378c84771d42c03e1f0e4e18434b6f3b662ac20"
+        },
+        {
+          "path": "services/safeLogger.js",
+          "bytes": 847,
+          "sha256": "89a77704d86948b1b44f9513c735695c2dce7a8763880796f2160fd71c088f66",
+          "gitBlob": "8246c3db9ba6772bbb01972c338b53b0ea68b9f9"
+        },
+        {
+          "path": "services/securityConfiguration.js",
+          "bytes": 1860,
+          "sha256": "4146581bddd3dd3eb26f3a12e6c1522e940300168abe9d49b9e62554bc742f9f",
+          "gitBlob": "bfbff732ac3f09b19bebc6c78e21757d77352f5c"
+        },
+        {
+          "path": "services/storageErrors.js",
+          "bytes": 837,
+          "sha256": "5fe6daf37c31e994db6669d355003450e1097838185723438bb105365b4f637e",
+          "gitBlob": "d4eb073cfe0b3ee4cce3064d249a677092187888"
+        },
+        {
+          "path": "services/storageService.js",
+          "bytes": 9451,
+          "sha256": "2dea22e72fd74042d4f91cb267bcc8e5c9f208664789e3cba44a9df6eba41dba",
+          "gitBlob": "94c59b375b819208d238531ddad962bec0e6aa95"
+        },
+        {
+          "path": "services/transcriptValidation.js",
+          "bytes": 283,
+          "sha256": "79b6f533c6529229c6f50d4f4fb6cde25f3d41ecbaf89769a0ec8ed3226fdc39",
+          "gitBlob": "d1734d4f2d7da65dc05b88768c314b3d374e7c27"
+        }
+      ],
+      "bytes": 210460
+    },
+    "python": {
+      "commit": "a76c6f47bde88f39570c99fb1de012cfbda9df72",
+      "files": [
+        {
+          "path": "analysis_admission.py",
+          "bytes": 2818,
+          "sha256": "0101700b0b9791dac9a50662e09fd333c1df2dfbaad8db57e5fd477615772ac2",
+          "gitBlob": "7cb80c0276b3919949c505b60d1f9fdde6baa4cc"
+        },
+        {
+          "path": "assessment_details.py",
+          "bytes": 4465,
+          "sha256": "69a50275a1a8736a0f99165b0f39f9fb385439fa5d2d1ded6475c4985957b462",
+          "gitBlob": "40a113962db3c2611405c212760de034345b2cd5"
+        },
+        {
+          "path": "audio_analysis_processing_files/__init__.py",
+          "bytes": 515,
+          "sha256": "4d8c3ed4f2f6de5bb5c54d2f12f25ef1607b90fcc3e92c89c8f840f5f4624e6c",
+          "gitBlob": "94140fc6934ca513fb94ac6d96eeb09cacec4f53"
+        },
+        {
+          "path": "audio_analysis_processing_files/articulation/__init__.py",
+          "bytes": 1539,
+          "sha256": "4885489ca2cfea4624e8bbcdacdc522b5b2840244f1c8516df82a58945320fc1",
+          "gitBlob": "94ebc08f6ffac4efef7bc53b239017ae4791e908"
+        },
+        {
+          "path": "audio_analysis_processing_files/articulation/accurate_pronunciation.py",
+          "bytes": 1907,
+          "sha256": "9ad6813633656fe3a4cc66cfad330abac74fdc826eaec6f5d4ed89bb66ebad8e",
+          "gitBlob": "6cbdc4fda98377a30b44cacbd288c9daf2d2bbc2"
+        },
+        {
+          "path": "audio_analysis_processing_files/articulation/clear_enunciation.py",
+          "bytes": 9145,
+          "sha256": "53c3dccb213347e891e268cdf6ccc703800d2997ce0d9ff2bcd1c9bffc9ff52b",
+          "gitBlob": "bc7c36701f18b6cc6526beb1064ef2a65979acf5"
+        },
+        {
+          "path": "audio_analysis_processing_files/filler_words.py",
+          "bytes": 11276,
+          "sha256": "54f345d9eb320f97de46ef5791e0b1d2f4aa7c5223a77113bf055c3eff27ad6f",
+          "gitBlob": "a5892afa71adc575d310a3464f0d65f8a1d4878b"
+        },
+        {
+          "path": "audio_analysis_processing_files/speaking_rate.py",
+          "bytes": 2256,
+          "sha256": "857e7ce0d268ef55d6961edcffa60539dc56ba25d771ba4575b778aa67ea3f7a",
+          "gitBlob": "54481c6c9a214218ca87d32d6325c594b1b11363"
+        },
+        {
+          "path": "audio_analysis_processing_files/vocal_variety/__init__.py",
+          "bytes": 344,
+          "sha256": "50191c33fba7eda973ba71ac7283744882784467c90c690016adf41225d760f8",
+          "gitBlob": "9c1c3798ef573403b0b3e0425b7aeb14af840f83"
+        },
+        {
+          "path": "audio_analysis_processing_files/vocal_variety/frequency_pitch.py",
+          "bytes": 6440,
+          "sha256": "0b54f016224dbdc526fb1310106dea66ec0d157370f5bdfc93552451c8e04f7b",
+          "gitBlob": "9ed985c898c7310be1b85318f68dc7bbce0125c8"
+        },
+        {
+          "path": "audio_analysis_processing_files/vocal_variety/signal_intensity.py",
+          "bytes": 5108,
+          "sha256": "ff3eeed5ce0280b4b2101add7e3b326d9fa9c9bb1fcc6b9af45fcbda9f061cf4",
+          "gitBlob": "6a3eeff3e5cb684b422cc1f20a7316f015d88fe4"
+        },
+        {
+          "path": "audio_analysis_processing_files/vocal_variety/temporal_pauses.py",
+          "bytes": 2670,
+          "sha256": "1d585656998df297698b374b695ea6be52479a9fd1c852447133fad0d062a945",
+          "gitBlob": "c956ec4a1f74b944431430a08b55ca588dc73dbf"
+        },
+        {
+          "path": "audio_analysis_processing_files/word_alignment.py",
+          "bytes": 2306,
+          "sha256": "376171ed3b9bdbe9165d8d252ac5a150e884497755171d0088737f6702715b5d",
+          "gitBlob": "825394280d744864f349e2cfdc0f1c037e2eab12"
+        },
+        {
+          "path": "audio_validation.py",
+          "bytes": 8533,
+          "sha256": "67ea470178a2b2d8caad313f39559fdcb0cc87a934da64e46951b19b6a03a4c7",
+          "gitBlob": "a592cb8e3738a521a90b649cd3f1d791e7e3d3c2"
+        },
+        {
+          "path": "docker/Dockerfile.v6-overlay",
+          "bytes": 544,
+          "sha256": "78585270a8cc2296b9a34351675f57cbd7c24404e9931fcd5bd7b4db55ee5a5c",
+          "gitBlob": "9b2f50656b3f10ee9266014c10b22d48dee74587"
+        },
+        {
+          "path": "docker/Dockerfile.v6-overlay.dockerignore",
+          "bytes": 338,
+          "sha256": "504fe2644b435cecf169840ef96f44b536ddfbfbffa4047fdd2aada77230e1fa",
+          "gitBlob": "44c5d5cd74d63dd60e5bcf2f0bff1e75262c199a"
+        },
+        {
+          "path": "fastapi_backend.py",
+          "bytes": 13646,
+          "sha256": "2aa4127e7436bf72d83a4deb12f447a95a2f347d74bf40cee3ee6ac0a0064eb0",
+          "gitBlob": "fa41031b9d8eb07e1ed4262547bffe2e2a86368f"
+        },
+        {
+          "path": "model.py",
+          "bytes": 13744,
+          "sha256": "c5238d7bdf363d471c060bede1ebb5c5aa9807a9498b62b698ae54dbf4c25076",
+          "gitBlob": "564db7bba5772e0f850fb2f10712d58dd38da88f"
+        },
+        {
+          "path": "whisper_service.py",
+          "bytes": 21752,
+          "sha256": "049fdddacc9aff7808136bc634fbe63903b4300d42c3f9a4d9226fe41e3b8308",
+          "gitBlob": "d4f81283ee60dc778b6a5f0ad2478bd9215ee0a4"
+        }
+      ],
+      "bytes": 109346
+    }
+  }
+}
