@@ -26,7 +26,7 @@ subprocess.run([sys.executable,'-m','pip','check'],check=True)
 subprocess.run([sys.executable,'/app/model_integrity.py'],check=True)
 """
     hashes = {item.relative_to(context).as_posix(): hashlib.sha256(item.read_bytes()).hexdigest()
-              for item in context.rglob('*.py')}
+              for item in context.rglob('*') if item.is_file() and item.suffix in ('.py', '.json')}
     v.docker(*v.run_args('python-integrity-' + v.key, memory='4g'), '--entrypoint=python',
              v.image, '-c', code, json.dumps(hashes), seconds=180)
     status, diagnostic = v.docker(*v.run_args('python-invalid-' + v.key, memory='4g'),

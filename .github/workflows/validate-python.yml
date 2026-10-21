@@ -5,23 +5,25 @@ on:
     paths: [.github/workflows/validate-python.yml, validation/remote/**]
 permissions:
   contents: read
-  packages: read
 concurrency:
   group: frozen-python-validation
   cancel-in-progress: false
 jobs:
   python-candidate:
     if: github.repository == 'Apol-bit/ispeak_python-backendV2' && github.actor == 'Apol-bit' && github.run_attempt == 1
+    # Must already exist with required review and an environment-scoped read-only CI secret.
+    environment: ispeak-python-private-validation
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
       ROLE: python
       BUILDKIT_IMAGE: moby/buildkit@sha256:99368f3e46177c6405b9740e4461d91cee004128daeecca78d4ceac50ec1da5c
-      AUTOMATION_REVIEW_APPROVED: 'false'
-      EXPORT_LOAD_CONTROLS_APPROVED: 'false'
+      AUTOMATION_REVIEW_APPROVED: 'true'
+      TESTING_CONTAINMENT_ACCEPTED: 'true'
       # Exact successful Node automation commit/run, supplied after Node validation.
-      NODE_VALIDATION_RUN_ID: REVIEW_REQUIRED
-      NODE_AUTOMATION_SHA: REVIEW_REQUIRED
+      PRIVATE_BASE_ACCESS_APPROVED: 'true'
+      NODE_VALIDATION_RUN_ID: '39550512234'
+      NODE_AUTOMATION_SHA: '796134aaa526023dd2c4574bdf807dcaaf67e5b8'
       ACTIONS_STEP_DEBUG: 'false'
     steps:
       - name: Fetch reviewed automation without persistent credentials
@@ -37,13 +39,17 @@ jobs:
           git -C automation -c core.hooksPath=/dev/null fetch --depth=1 origin "$GITHUB_SHA" >/dev/null 2>&1
           git -C automation -c core.hooksPath=/dev/null checkout --detach FETCH_HEAD >/dev/null 2>&1
           test "$(git -C automation rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Check validation tooling offline
+        shell: bash
+        run: python3 -B automation/validation/remote/test_simplified.py
       - name: Validate frozen Python overlay after Node success
         shell: bash
         env:
-          GHCR_READ_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python3 automation/validation/remote/runner.py python
+          GHCR_READ_TOKEN: ${{ secrets.ISPEAK_GHCR_PUBLISHER }}
+        run: python3 -B automation/validation/remote/runner.py python
       - name: Remove only run-owned containers and private temporary files
         if: always()
+        timeout-minutes: 3
         shell: bash
         run: |
-          test ! -f automation/validation/remote/runner.py || python3 automation/validation/remote/runner.py cleanup
+          test ! -f automation/validation/remote/runner.py || python3 -B automation/validation/remote/runner.py cleanup

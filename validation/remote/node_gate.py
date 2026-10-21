@@ -7,7 +7,8 @@ import urllib.request
 
 def require_node_success():
     run_id, sha = os.environ.get('NODE_VALIDATION_RUN_ID', ''), os.environ.get('NODE_AUTOMATION_SHA', '')
-    if not run_id.isdigit() or not re.fullmatch('[a-f0-9]{40}', sha):
+    if (run_id != '39550512234'
+            or sha != '796134aaa526023dd2c4574bdf807dcaaf67e5b8'):
         raise RuntimeError('Reviewed Node run identity has not been supplied')
     base = f'https://api.github.com/repos/Apol-bit/ispeak_backend/actions/runs/{run_id}'
 
@@ -30,7 +31,7 @@ def require_node_success():
     matches = [job for job in jobs if job['name'] == 'node-candidate' and job['conclusion'] == 'success']
     if len(matches) != 1:
         raise RuntimeError('Successful Node candidate job not found')
-    required = ['Fetch reviewed automation without persistent credentials', 'Validate frozen Node candidate']
+    required = ['Fetch reviewed automation without persistent credentials', 'Check validation tooling offline', 'Validate frozen Node candidate', 'Remove only run-owned containers and private temporary files']
     for name in required:
         if not any(step['name'] == name and step['conclusion'] == 'success' for step in matches[0]['steps']):
             raise RuntimeError('Required Node validation step did not pass')
