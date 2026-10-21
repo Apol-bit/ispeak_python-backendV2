@@ -16,6 +16,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
+      PUBLICATION_APPROVED: 'true'
       ROLE: python
       BUILDKIT_IMAGE: moby/buildkit@sha256:99368f3e46177c6405b9740e4461d91cee004128daeecca78d4ceac50ec1da5c
       AUTOMATION_REVIEW_APPROVED: 'true'
@@ -41,7 +42,9 @@ jobs:
           test "$(git -C automation rev-parse HEAD)" = "$GITHUB_SHA"
       - name: Check validation tooling offline
         shell: bash
-        run: python3 -B automation/validation/remote/test_simplified.py
+        run: |
+          python3 -B automation/validation/remote/test_simplified.py
+          python3 -B automation/validation/remote/test_publish.py
       - name: Validate frozen Python overlay after Node success
         shell: bash
         env:

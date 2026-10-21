@@ -237,6 +237,8 @@ class Validation:
         enforce(self.role, stable=True)  # Before source fetch, registry pull, builder bootstrap.
         self.monitor = True
         repo, context = export(self.role, self.root, self.command)
+        if os.environ.get('PUBLICATION_APPROVED') != 'true':
+            raise RuntimeError('Reviewed publication workflow activation required')
         if self.role == 'python':
             self.login()
         self.builder_start()
@@ -288,6 +290,8 @@ class Validation:
                       cached_progress_lines=sum(line.endswith(b'CACHED') for line in output.splitlines()),
                       build_log_sha256=hashlib.sha256(output).hexdigest(),
                       resource_minima=self.minimum, published=False, cloud_integration_tested=False)
+        from publish_image import publish
+        publish(self, image)  # Only after every candidate check has passed; no rebuild.
 
 
 def main():
@@ -320,6 +324,9 @@ def main():
                           'published': False}), flush=True)
         result = 1
     finally:
+        validator.evidence('publication_state', attempted=getattr(validator, 'publication_started', False),
+                           registry_digest=getattr(validator, 'published_digest', None),
+                           rollback_or_deletion_performed=False)
         validator.evidence('validation_summary', result='PASS' if result == 0 else 'STOP',
                            source_commit=COMMITS[role], resource_minima=validator.minimum,
                            cleanup_pending=True, published=False)
