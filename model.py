@@ -252,6 +252,8 @@ class ISpeakWhisper:
             )
             self.model: Any = adapted_model.merge_and_unload(safe_merge=True)
             self.model.eval()
+            from audio_analysis_processing_files.whisper_timestamps import install_selected_head_timestamps
+            install_selected_head_timestamps(self.model)
             self.pipe: Any = pipeline(
                 "automatic-speech-recognition",
                 model=self.model,
