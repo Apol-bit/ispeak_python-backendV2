@@ -222,6 +222,12 @@ def _run_analysis(
 
     with _validation_stage(audio_role, 'signal_validation'), memory_stage('signal_validation', audio_role):
         audio_duration = validate_audio(y, sr)
+    logger.info(
+        'whisper_input_metadata role=%s duration_seconds=%.6f sample_rate=%d '
+        'channels=1 samples=%d',
+        audio_role if audio_role in ('user', 'reference') else 'unknown',
+        audio_duration, sr, len(y),
+    )
     y_original = y.copy()
 
     # ---------- TRANSCRIBE ----------

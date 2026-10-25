@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import hmac
+import hashlib
 import os
 import time
 import tempfile
@@ -188,6 +189,36 @@ def _save_upload(upload, suffix):
         raise
 
 
+def _file_sha256(file_path: str) -> str:
+    digest = hashlib.sha256()
+    with open(file_path, "rb") as media:
+        for chunk in iter(lambda: media.read(64 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _log_transport_metadata(*, file_path: str, suffix: str, content_type: str | None,
+                            expected_sha256: str | None, declared: float | None,
+                            language: str, reference_used: bool) -> None:
+    actual_sha256 = _file_sha256(file_path)
+    expected_valid = bool(expected_sha256 and len(expected_sha256) == 64
+                          and all(char in '0123456789abcdef' for char in expected_sha256))
+    hash_matches = expected_valid and hmac.compare_digest(actual_sha256, expected_sha256)
+    safe_content_type = content_type if content_type in {
+        'audio/wav', 'audio/wave', 'audio/x-wav', 'audio/mpeg', 'audio/mp4',
+        'audio/aac', 'audio/flac', 'audio/ogg', 'application/ogg',
+    } else 'unknown'
+    logger.info(
+        'audio_transport_metadata sha256=%s bytes=%d extension=%s content_type=%s '
+        'upstream_hash_present=%s upstream_hash_match=%s declared_duration_seconds=%s '
+        'language=%s reference_used=%s',
+        actual_sha256, os.path.getsize(file_path), suffix, safe_content_type,
+        str(expected_valid).lower(), str(hash_matches).lower(),
+        'none' if declared is None else f'{declared:.3f}', language,
+        str(reference_used).lower(),
+    )
+
+
 @app.get("/live")
 async def live():
     return {"status": "alive"}
@@ -275,7 +306,7 @@ async def _transcribe(request: Request, response: Response):
         raise HTTPException(status_code=400, detail="Unsupported language")
     try:
         maximum = duration_limit(form.get('max_duration_seconds', 300))
-        declared_duration(form.get('duration_seconds'), maximum)
+        declared = declared_duration(form.get('duration_seconds'), maximum)
     except (SpeechValidationError, TypeError, ValueError) as exc:
         code = exc.code if isinstance(exc, SpeechValidationError) else 'invalid_duration'
         raise HTTPException(status_code=400, detail={'code': code, 'message': 'Invalid or excessive recording duration.'}) from exc
@@ -294,6 +325,15 @@ async def _transcribe(request: Request, response: Response):
         with memory_stage('upload_copy'):
             temp_path = _save_upload(file, suffix)
             memory_metadata(path=temp_path)
+            _log_transport_metadata(
+                file_path=temp_path,
+                suffix=suffix,
+                content_type=getattr(file, 'content_type', None),
+                expected_sha256=request.headers.get('X-iSpeak-Audio-SHA256'),
+                declared=declared,
+                language=language,
+                reference_used=reference_audio is not None,
+            )
             if reference_audio is not None:
                 ref_temp_path = _save_upload(reference_audio, ref_suffix)
                 memory_metadata(path=ref_temp_path)
