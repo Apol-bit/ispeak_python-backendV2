@@ -4,6 +4,7 @@ import json
 
 
 def validate(v, tests, manifest):
+    v.phase = 'dependency_inventory'
     inventory_code = "import importlib.metadata as m,json;print(json.dumps({d.metadata['Name'].lower().replace('_','-'):d.version for d in m.distributions()}))"
     # Model-free metadata query; explicitly override the inherited integrity/server entrypoint.
     from materialize import BASE
@@ -58,6 +59,7 @@ print(json.dumps({'model_free_tests_each_mode':135,'hook_active':True,'model_man
                            (tests / '.dockerignore', '/app/.dockerignore')]:
         mount_args += ['--mount', f'type=bind,source={source},target={target},readonly']
     # Runtime code/model layers remain read-only; only isolated scratch is writable.
+    v.phase = 'model_free_image_checks'
     result = v.docker(*v.run_args('model-free-' + v.key, memory='4g'),
                      '--read-only', '--tmpfs', '/tmp/ispeak:rw,size=512m,mode=1777',
                      '-e', 'ISPEAK_ENV=development', '-e', 'ISPEAK_SERVICE_TOKEN=',

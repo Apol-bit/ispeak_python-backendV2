@@ -26,6 +26,17 @@ def approved():
 
 
 class CandidateSafetyTests(unittest.TestCase):
+    def test_failure_evidence_never_exposes_private_output(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            v = Mock(root=Path(tmp), sequence=1, phase='model_free_image_checks')
+            (Path(tmp) / 'command-1.log').write_text(
+                'PRIVATE_TOKEN PRIVATE_RECORDING\nTraceback\nFile "<string>", line 27\n'
+                'ModuleNotFoundError: PRIVATE_PATH\n')
+            candidate.report_failure(v, RuntimeError('PRIVATE_SECRET'))
+            v.evidence.assert_called_once_with('diagnostic_failure', phase='model_free_image_checks',
+                                               category='missing_python_module', inline_python_line=27)
+            self.assertNotIn('PRIVATE', repr(v.evidence.call_args))
+
     def test_manual_approval_and_host_gates(self):
         with patch.object(candidate.os, 'name', 'posix'), patch.dict(os.environ, approved(), clear=True):
             candidate.gate()

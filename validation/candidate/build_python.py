@@ -24,6 +24,48 @@ RECIPE = 'docker/Dockerfile.v6-security-overlay'
 MANIFEST = Path(__file__).with_name('context-manifest.json')
 
 
+def report_failure(v, error):
+    """Fixed labels only: never disclose subprocess text, arguments or secrets."""
+    category = 'unclassified'
+    known = ['Unexpected platform', 'Pinned model base layer chain changed',
+             'Credential embedded in candidate environment', 'Nonroot/healthcheck mismatch',
+             'Startup command changed', 'Source label mismatch',
+             'Inherited runtime configuration changed',
+             'Unexpected dependency drift or security version mismatch',
+             'Incomplete model-free evidence', 'Bounded subprocess timeout; no retry']
+    if type(error) is RuntimeError and str(error) in known:
+        category = str(error)
+    details = {}
+    try:
+        log = v.root / ('command-' + str(v.sequence) + '.log')
+        if log.is_file() and log.stat().st_size <= 4 * 1024 * 1024:
+            text = log.read_text(encoding='utf-8', errors='replace')
+            # Keep only allowlisted categories, never the matching raw line.
+            signatures = [('FAIL: test_', 'model_free_test_failure'),
+                          ('ModuleNotFoundError:', 'missing_python_module'),
+                          ('Long-form retention optimization inactive', 'retention_hook_inactive'),
+                          ('Timestamp optimization inactive', 'timestamp_hook_inactive'),
+                          ('No matching distribution found', 'wheel_unavailable'),
+                          ('DO NOT MATCH THE HASHES', 'wheel_hash_mismatch'),
+                          ('failed to calculate checksum', 'build_context_missing_file'),
+                          ('No such file or directory', 'missing_file'),
+                          ('no space left on device', 'disk_exhausted'),
+                          ('AssertionError', 'assertion_failed')]
+            matches = [(text.find(signature), label) for signature, label in signatures if signature in text]
+            if matches:
+                category = min(matches)[1]
+            test = re.search(r'^FAIL: (test_[a-z0-9_]+) \(testing_script\.(test_[a-z0-9_]+)\.', text, re.M)
+            if test:
+                details['test'] = test.group(2) + '.' + test.group(1)
+            lines = re.findall(r'File "<string>", line ([0-9]+)', text)
+            if lines:
+                details['inline_python_line'] = int(lines[-1])
+    except Exception:
+        pass
+    v.evidence('diagnostic_failure', phase=getattr(v, 'phase', 'initialization'),
+               category=category, **details)
+
+
 def publish_if_approved(v, image):
     if os.environ.get('PUBLICATION_APPROVED') != 'true':
         v.evidence('diagnostic_publication', approved=False, attempted=False)
@@ -108,16 +150,21 @@ class DiagnosticBuild(Validation):
         gate()  # Before credentials, private pulls, source fetch or Docker calls.
         enforce('python', stable=True)
         self.monitor = True
+        self.phase = 'source_export'
         context, tests, manifest = export(self)
+        self.phase = 'private_base_access'
         self.login()  # Existing protected credential, stripped from subprocess env.
+        self.phase = 'builder_start'
         self.builder_start()
         enforce('python', stable=True)
         started = time.monotonic()
+        self.phase = 'image_build'
         self.docker('buildx', 'build', '--builder', self.builder, '--platform=linux/amd64',
                     '--progress=plain', '--provenance=false', '--sbom=false', '--load',
                     '--label', 'org.opencontainers.image.revision=' + SOURCE,
                     '--label', self.label, '-t', self.image, '-f', str(context / RECIPE),
                     str(context), seconds=900)
+        self.phase = 'image_configuration'
         image = json.loads(self.docker('image', 'inspect', self.image))[0]
         base = json.loads(self.docker('image', 'inspect', BASE))[0]
         if image['Os'] != 'linux' or image['Architecture'] != 'amd64':
@@ -140,10 +187,12 @@ class DiagnosticBuild(Validation):
         for key in ['Env', 'WorkingDir', 'ExposedPorts']:
             if cfg.get(key) != base['Config'].get(key):
                 raise RuntimeError('Inherited runtime configuration changed')
+        self.phase = 'builder_stop'
         self.stop_builder()
         from validate_image import validate
         validate(self, tests, manifest)
         self.model_free_passed = True
+        self.phase = 'private_publication'
         immutable = publish_if_approved(self, image)
         self.evidence('diagnostic_candidate', result='PASS', source_commit=SOURCE,
                       image_id=image['Id'], elapsed_seconds=round(time.monotonic() - started, 2),
@@ -163,6 +212,9 @@ def main():
     try:
         if not sys.argv[1:]:
             v.execute()
+    except Exception as error:
+        report_failure(v, error)
+        raise
     finally:
         try:
             if not sys.argv[1:]:
