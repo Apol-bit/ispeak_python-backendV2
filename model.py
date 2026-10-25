@@ -261,6 +261,9 @@ class ISpeakWhisper:
                 feature_extractor=self.processor.feature_extractor,
                 device=device,
             )
+            from audio_analysis_processing_files.whisper_retention import install_longform_retention
+            retention_active = install_longform_retention(self.model, type(self.pipe))
+            print(f"Whisper long-form diagnostic retention optimization active: {retention_active}")
         except Exception as exc:
             raise ModelUnavailableError(
                 f"Could not load local {self.model_name} model: {exc}"
@@ -293,11 +296,13 @@ class ISpeakWhisper:
         if language in language_codes:
             generate_kwargs["language"] = language_codes[language]
 
-        output: Any = self.pipe(
-            pipeline_input,
-            return_timestamps="word",
-            generate_kwargs=generate_kwargs,
-        )
+        from audio_analysis_processing_files.whisper_retention import compact_whisper_segments
+        with compact_whisper_segments():
+            output: Any = self.pipe(
+                pipeline_input,
+                return_timestamps="word",
+                generate_kwargs=generate_kwargs,
+            )
         formatted_words = []
         formatted_segments = []
         full_text = output.get("text", "").strip()
