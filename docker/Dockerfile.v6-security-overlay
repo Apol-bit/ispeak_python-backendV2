@@ -1,0 +1,14 @@
+# Preserve RC1 model/runtime layers; replace only the three reviewed packages.
+FROM ghcr.io/apol-bit/ispeak-python@sha256:a938fb342d2ef69ad0e6110b4031d41b7ddc9628311f2f50788922a2c034c05e
+
+USER 0:0
+COPY docker/requirements.security.txt /tmp/requirements.security.txt
+RUN python -m pip install --no-cache-dir --no-deps --only-binary=:all: --require-hashes -r /tmp/requirements.security.txt \
+    && python -m pip check \
+    && rm /tmp/requirements.security.txt
+USER 10001:10001
+
+WORKDIR /app
+COPY fastapi_backend.py model.py whisper_service.py audio_validation.py analysis_admission.py assessment_details.py memory_diagnostics.py ./
+COPY audio_analysis_processing_files/ ./audio_analysis_processing_files/
+# Inherit offline v6 paths, integrity entrypoint, healthcheck and one worker.

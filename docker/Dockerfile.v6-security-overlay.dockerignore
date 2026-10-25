@@ -1,0 +1,16 @@
+# Dockerfile-specific allowlist; no weights, recordings, credentials or tests.
+**
+!fastapi_backend.py
+!model.py
+!whisper_service.py
+!audio_validation.py
+!analysis_admission.py
+!assessment_details.py
+!memory_diagnostics.py
+!audio_analysis_processing_files/
+!audio_analysis_processing_files/**/*.py
+!audio_analysis_processing_files/*.py
+!docker/
+!docker/requirements.security.txt
+**/__pycache__/
+**/*.pyc
