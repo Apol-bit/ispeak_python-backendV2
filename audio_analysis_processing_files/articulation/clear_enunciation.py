@@ -231,12 +231,11 @@ def compare_reference_enunciation(
     try:
         reference_features = features(reference)
         user_features = features(user)
-        accumulated_cost, path = librosa.sequence.dtw(
-            X=reference_features,
-            Y=user_features,
-            metric="cosine",
+        from .bounded_dtw import cosine_dtw_statistics
+        terminal_cost, path_length = cosine_dtw_statistics(
+            reference_features, user_features,
         )
-        mean_cost = float(accumulated_cost[-1, -1] / max(len(path), 1))
+        mean_cost = float(terminal_cost / max(path_length, 1))
         score = round(float(100.0 * np.exp(-1.5 * max(0.0, mean_cost))), 1)
     except (ValueError, FloatingPointError) as exc:
         return {
