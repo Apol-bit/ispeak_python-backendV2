@@ -6,6 +6,7 @@ import logging
 import os
 from contextlib import contextmanager
 import librosa
+from memory_diagnostics import memory_stage, memory_metadata
 from audio_validation import MIN_RMS, SpeechValidationError, load_valid_audio, validate_audio, validate_transcript
 from difflib import SequenceMatcher
 from typing import Any, Dict, List
@@ -180,7 +181,7 @@ def _run_analysis(
     Returns analysis for usable speech; invalid input raises SpeechValidationError.
     """
 
-    with _validation_stage(audio_role, 'signal_validation'):
+    with _validation_stage(audio_role, 'signal_validation'), memory_stage('signal_validation', audio_role):
         audio_duration = validate_audio(y, sr)
     y_original = y.copy()
 
@@ -189,14 +190,15 @@ def _run_analysis(
     # against filtering out hesitation sounds like "um" and "uh" from the transcript.
     # condition_on_previous_text=False prevents Whisper from using its own
     # previous output to suppress filler words in later segments.
-    transcription = model.transcribe(
-        file_path,
-        audio_data=y_original,
-        word_timestamps=True,
-        initial_prompt="Umm, uh, hmm, like, you know, ah, er, um, ano, parang, yung, basically, actually.",
-        condition_on_previous_text=False,
-        language=language,
-    )
+    with memory_stage('whisper_word_timestamps', audio_role):
+        transcription = model.transcribe(
+            file_path,
+            audio_data=y_original,
+            word_timestamps=True,
+            initial_prompt="Umm, uh, hmm, like, you know, ah, er, um, ano, parang, yung, basically, actually.",
+            condition_on_previous_text=False,
+            language=language,
+        )
 
     text: str = transcription.get("text", "").strip()
     segments: List[Dict[str, Any]] = transcription.get("segments", [])
@@ -216,9 +218,12 @@ def _run_analysis(
 
     # ---------- ENERGY ----------
     # Use ORIGINAL audio â€” normalization flattens loudness, making score always 100
-    intensity_stats = analyze_signal_intensity(y_original, sr)
-    frequency_stats = analyze_frequency_pitch(y_original, sr)
-    pause_stats = analyze_temporal_pauses(word_segments)
+    with memory_stage('intensity', audio_role):
+        intensity_stats = analyze_signal_intensity(y_original, sr)
+    with memory_stage('pitch', audio_role):
+        frequency_stats = analyze_frequency_pitch(y_original, sr)
+    with memory_stage('pauses', audio_role):
+        pause_stats = analyze_temporal_pauses(word_segments)
     energy_stats = {
         "average_volume_db": intensity_stats.get("average_volume_db", -80.0),
         "dynamic_range": intensity_stats.get("dynamic_range_db", 0.0),
@@ -244,11 +249,13 @@ def _run_analysis(
         pacing_score = 0.0
 
     # ---------- PRONUNCIATION ----------
-    articulation_stats = analyze_articulation(word_segments, y=y_original, sr=sr)
+    with memory_stage('articulation', audio_role):
+        articulation_stats = analyze_articulation(word_segments, y=y_original, sr=sr)
     pronunciation_score = float(articulation_stats.get("articulation_score", 0))
 
     # ---------- FILLER ----------
-    filler_stats = analyze_fillers(word_segments, full_transcript=text)
+    with memory_stage('filler_classification', audio_role):
+        filler_stats = analyze_fillers(word_segments, full_transcript=text)
     raw_filler_score = filler_stats.get("filler_score")
     filler_score = (
         float(raw_filler_score)
@@ -368,8 +375,9 @@ def generate_full_analysis(
     """
 
     # ---------- LOAD AUDIO ----------
-    with _validation_stage('user', 'decode'):
+    with _validation_stage('user', 'decode'), memory_stage('decode_validate', 'user'):
         y, sr = load_valid_audio(file_path, max_duration_seconds)
+        memory_metadata(audio=y, sample_rate=sr)
     sr = int(sr)
 
     result = _run_analysis(file_path, y, sr, model, language)
@@ -404,16 +412,18 @@ def generate_reference_analysis(
     logger.info("=== REFERENCE-BASED ANALYSIS ===")
 
     # ---------- LOAD BOTH AUDIO FILES ----------
-    with _validation_stage('user', 'decode'):
+    with _validation_stage('user', 'decode'), memory_stage('decode_validate', 'user'):
         y_user, sr = load_valid_audio(user_path, max_duration_seconds)
+        memory_metadata(audio=y_user, sample_rate=sr)
     sr = int(sr)
     # Reference comparison is optional: scripts without reference audio already
     # use the standard assessment. Only validation failures permit this fallback;
     # model, storage and unexpected runtime failures must still propagate.
     ref_result = None
     try:
-        with _validation_stage('reference', 'decode'):
+        with _validation_stage('reference', 'decode'), memory_stage('decode_validate', 'reference'):
             y_ref, sr_ref = load_valid_audio(reference_path)
+            memory_metadata(role='reference', audio=y_ref, sample_rate=sr_ref)
         sr_ref = int(sr_ref)
         logger.info("Analyzing reference audio...")
         ref_result = _run_analysis(reference_path, y_ref, sr_ref, model, language, audio_role='reference')
@@ -468,7 +478,8 @@ def generate_reference_analysis(
     ref_energy_score = round(ref_energy_score, 1)
 
     # ---------- REFERENCE-BASED ENUNCIATION ----------
-    enunciation_comparison = compare_reference_enunciation(y_user, y_ref, sr)
+    with memory_stage('reference_dtw'):
+        enunciation_comparison = compare_reference_enunciation(y_user, y_ref, sr)
     transcript_similarity = SequenceMatcher(
         None,
         ref_result.get("transcription", "").lower().split(),

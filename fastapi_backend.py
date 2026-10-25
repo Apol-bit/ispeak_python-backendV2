@@ -22,6 +22,7 @@ from model import DEFAULT_MODEL_NAME, ModelUnavailableError, load_model, validat
 validate_local_audio_uat()
 from whisper_service import generate_full_analysis, generate_reference_analysis
 from audio_validation import SpeechValidationError, duration_limit, declared_duration
+from memory_diagnostics import memory_request, memory_stage, memory_checkpoint, memory_metadata
 
 ALLOWED_EXTENSIONS = {".wav", ".mp3", ".m4a", ".flac", ".ogg", ".aac"}
 MAX_UPLOAD_MB = int(os.getenv("ISPEAK_MAX_UPLOAD_MB", "25"))
@@ -230,18 +231,22 @@ async def health():
 
 @app.post("/transcribe")
 async def transcribe(request: Request, response: Response):
-    try:
-        async with admission.reserve():
-            return await _transcribe(request, response)
-    except (AdmissionFull, AdmissionTimeout) as exc:
-        raise HTTPException(
-            status_code=503,
-            detail="Speech analysis is busy. Please try again shortly.",
-            headers={"Retry-After": "5"},
-        ) from exc
-    finally:
-        # Starlette owns multipart spool files, independently of our copies.
-        await request.close()
+    with memory_request():
+        try:
+            async with admission.reserve():
+                memory_checkpoint('request_admitted')
+                return await _transcribe(request, response)
+        except (AdmissionFull, AdmissionTimeout) as exc:
+            memory_checkpoint('admission_rejected')
+            raise HTTPException(
+                status_code=503,
+                detail="Speech analysis is busy. Please try again shortly.",
+                headers={"Retry-After": "5"},
+            ) from exc
+        finally:
+            # Starlette owns multipart spool files, independently of our copies.
+            with memory_stage('request_cleanup'):
+                await request.close()
 
 
 async def _transcribe(request: Request, response: Response):
@@ -255,7 +260,8 @@ async def _transcribe(request: Request, response: Response):
         )
 
     try:
-        form = await request.form(max_files=2, max_fields=6)
+        with memory_stage('multipart_parse'):
+            form = await request.form(max_files=2, max_fields=6)
     except (AssertionError, RuntimeError) as exc:
         raise HTTPException(
             status_code=503,
@@ -275,6 +281,9 @@ async def _transcribe(request: Request, response: Response):
         raise HTTPException(status_code=400, detail={'code': code, 'message': 'Invalid or excessive recording duration.'}) from exc
     if reference_audio is not None:
         reference_audio = _require_upload(reference_audio, "reference_audio")
+    memory_metadata(reference_used=reference_audio is not None, upload=file)
+    if reference_audio is not None:
+        memory_metadata(upload=reference_audio)
 
     suffix = _validate_extension(file.filename)
     ref_suffix = _validate_extension(reference_audio.filename) if reference_audio else None
@@ -282,11 +291,15 @@ async def _transcribe(request: Request, response: Response):
     ref_temp_path = None
 
     try:
-        temp_path = _save_upload(file, suffix)
-        if reference_audio is not None:
-            ref_temp_path = _save_upload(reference_audio, ref_suffix)
+        with memory_stage('upload_copy'):
+            temp_path = _save_upload(file, suffix)
+            memory_metadata(path=temp_path)
+            if reference_audio is not None:
+                ref_temp_path = _save_upload(reference_audio, ref_suffix)
+                memory_metadata(path=ref_temp_path)
 
         async with admission.worker() as queue_wait_ms:
+            memory_checkpoint('inference_admitted')
             if await request.is_disconnected():
                 raise HTTPException(status_code=499, detail="Client disconnected")
             started = time.perf_counter()
@@ -323,9 +336,10 @@ async def _transcribe(request: Request, response: Response):
             detail="Audio processing failed",
         ) from exc
     finally:
-        for path in (temp_path, ref_temp_path):
-            if path and os.path.exists(path):
-                try:
-                    os.remove(path)
-                except OSError as exc:
-                    _log_failure("temporary_audio_cleanup_failed", exc)
+        with memory_stage('temporary_audio_cleanup'):
+            for path in (temp_path, ref_temp_path):
+                if path and os.path.exists(path):
+                    try:
+                        os.remove(path)
+                    except OSError as exc:
+                        _log_failure("temporary_audio_cleanup_failed", exc)

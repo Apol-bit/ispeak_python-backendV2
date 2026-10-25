@@ -5,6 +5,7 @@
 !whisper_service.py
 !audio_validation.py
 !analysis_admission.py
+!memory_diagnostics.py
 !assessment_details.py
 !audio_analysis_processing_files/
 !audio_analysis_processing_files/**/*.py
