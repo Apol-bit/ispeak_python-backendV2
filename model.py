@@ -261,9 +261,13 @@ class ISpeakWhisper:
                 feature_extractor=self.processor.feature_extractor,
                 device=device,
             )
-            from audio_analysis_processing_files.whisper_retention import install_longform_retention
+            from audio_analysis_processing_files.whisper_retention import (
+                install_longform_retention, install_active_chunk_release,
+            )
             retention_active = install_longform_retention(self.model, type(self.pipe))
             print(f"Whisper long-form diagnostic retention optimization active: {retention_active}")
+            chunk_active = install_active_chunk_release(self.model)
+            print(f"Whisper active-chunk self-attention release active: {chunk_active}")
         except Exception as exc:
             raise ModelUnavailableError(
                 f"Could not load local {self.model_name} model: {exc}"

@@ -58,3 +58,44 @@ regenerate its source-hash manifest for the newly approved commit; the existing
 1f000522 candidate cannot contain this uncommitted change. No build, Git
 mutation, deployment, dependency installation or production change is part of
 this patch.
+
+## Active-chunk follow-up (uncommitted validation candidate)
+
+Later reported measurements were approximately 16.15 GiB after Whisper and 184
+seconds processing the same 79.893-second recording, still rejected at 32 GiB.
+Those measurements do not identify a particular validation rule or tensor type.
+
+An additional guarded, instance-scoped forward hook now replaces only returned
+decoder self-attention diagnostics with empty batch-indexable tensors during
+long-form word-timestamp generation. The original forward pass still computes
+the same attention, predictions and cache. Logits, cross-attention and cache
+objects are preserved by identity. Self-attention diagnostics are not consumed
+by Whisper word alignment, fallback decisions or iSpeak's ASR pipeline. Original
+outputs outside this scope, short-form processing and unusual output shapes are
+left unchanged. A context variable resets even when generation raises. The
+exact Transformers conditional-generation forward source is fingerprinted;
+startup reports this additional hook's activation independently.
+
+Model-free tests check actual upstream timestamp extraction/postprocessing,
+float16/32/64 metadata, original-output preservation, cleanup and unsupported
+outputs. In 128 synthetic steps, retained self-attention tensor payload changes
+from 132,096 bytes to zero, with all original weak references expired. This is
+not an RSS measurement, a latency result or proof that real peak memory fits
+16 GiB. Cross-attention, score vectors, encoder diagnostics and current forward
+temporaries remain; the hook does not reduce their allocation.
+
+No speech-validation rule was changed. The existing privacy-safe log event
+`transcript_validation_rejected` reports the exact rule and counts. Possible
+rules are minimum_recognized_tokens, missing_word_timestamps,
+excessive_token_rate, single_token_dominance, repeated_phrase_dominance and
+insufficient_usable_timestamps. The response code alone cannot distinguish them.
+The last rule requires at least half the returned words (at least one) to have
+finite numeric timestamps satisfying 0 <= start < end <= duration + tolerance;
+for this recording the tolerance is one second. Obtain that single log event
+without audio/transcript values before diagnosing a transcription/validation
+fix. Do not lower validation thresholds or change the prompt based on conjecture.
+
+Before another remote build, review this follow-up, include its test module in
+the pinned CI source/hash manifest and require both retention hooks to activate.
+Then compare the same authorized recording against the prior image in isolation
+for exact output compatibility, rejection rule, peak/idle memory and latency.
