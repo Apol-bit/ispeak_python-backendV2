@@ -1,0 +1,82 @@
+name: Manual Python diagnostic build (optional approved private publication)
+on:
+  workflow_dispatch:
+    inputs:
+      accelerate_exception_approved:
+        description: Recorded Accelerate acceptance covers the three patches and isolated staging test-runner access
+        required: true
+        type: boolean
+        default: false
+      private_base_access_approved:
+        description: Approve read-only use of the existing protected GHCR credential and pinned RC1 base
+        required: true
+        type: boolean
+        default: false
+      containment_approved:
+        description: Approve bounded GitHub-hosted build and model-free containers; no inference or deployment
+        required: true
+        type: boolean
+        default: false
+      publication_approved:
+        description: SEPARATE approval to preserve the validated image privately in existing GHCR ispeak-python; no deployment
+        required: true
+        type: boolean
+        default: false
+      maintainer:
+        description: GitHub login of the maintainer who recorded exception approval
+        required: true
+        type: string
+      backup_reviewer:
+        description: GitHub login of the distinct backup reviewer who recorded exception approval
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: isolated-python-diagnostic-build
+  cancel-in-progress: false
+jobs:
+  build-only:
+    if: github.event_name == 'workflow_dispatch' && github.repository == 'Apol-bit/ispeak_python-backendV2' && github.actor == 'Apol-bit' && github.run_attempt == 1 && github.ref == 'refs/heads/ci/validate-python-a76c6f47-20261021' && inputs.accelerate_exception_approved && inputs.private_base_access_approved && inputs.containment_approved
+    # Existing environment protection/review must complete before credentials
+    # become available. Dispatch attestations do not grant/renew an exception.
+    environment: ispeak-python-private-validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      BUILDKIT_IMAGE: moby/buildkit@sha256:99368f3e46177c6405b9740e4461d91cee004128daeecca78d4ceac50ec1da5c
+      PRIVATE_BASE_ACCESS_APPROVED: ${{ inputs.private_base_access_approved }}
+      ACCELERATE_STAGING_APPROVED: ${{ inputs.accelerate_exception_approved }}
+      TESTING_CONTAINMENT_ACCEPTED: ${{ inputs.containment_approved }}
+      STAGING_MAINTAINER: ${{ inputs.maintainer }}
+      STAGING_BACKUP_REVIEWER: ${{ inputs.backup_reviewer }}
+      ACTIONS_STEP_DEBUG: 'false'
+    steps:
+      - name: Fetch this exact reviewed automation revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = workflow_dispatch
+          test "$GITHUB_REF" = refs/heads/ci/validate-python-a76c6f47-20261021
+          export GIT_TERMINAL_PROMPT=0
+          git -c core.hooksPath=/dev/null init automation >/dev/null
+          git -C automation remote add origin https://github.com/Apol-bit/ispeak_python-backendV2.git
+          git -C automation -c core.hooksPath=/dev/null fetch --depth=1 origin "$GITHUB_SHA" >/dev/null 2>&1
+          git -C automation -c core.hooksPath=/dev/null checkout --detach FETCH_HEAD >/dev/null 2>&1
+          test "$(git -C automation rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Test candidate and existing tooling without Docker or network
+        run: |
+          python3 -B automation/validation/remote/test_simplified.py
+          python3 -B automation/validation/remote/test_publish.py
+          python3 -B automation/validation/candidate/test_candidate.py
+      - name: Build and verify; publish privately only with separate approval
+        env:
+          GHCR_READ_TOKEN: ${{ secrets.ISPEAK_GHCR_PUBLISHER }}
+          PUBLICATION_APPROVED: ${{ inputs.publication_approved }}
+        run: python3 -B automation/validation/candidate/build_python.py
+      - name: Clean only this run's resources
+        if: always()
+        timeout-minutes: 3
+        shell: bash
+        run: |
+          test ! -f automation/validation/candidate/build_python.py || python3 -B automation/validation/candidate/build_python.py cleanup
