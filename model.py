@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 from pathlib import Path
+from time import perf_counter
 from typing import Any
 
 
@@ -268,6 +270,9 @@ class ISpeakWhisper:
             print(f"Whisper long-form diagnostic retention optimization active: {retention_active}")
             chunk_active = install_active_chunk_release(self.model)
             print(f"Whisper active-chunk self-attention release active: {chunk_active}")
+            from audio_analysis_processing_files.whisper_fallback import install_fallback_diagnostics
+            fallback_diagnostics_active = install_fallback_diagnostics(self.model)
+            print(f"Whisper bounded-fallback diagnostics active: {fallback_diagnostics_active}")
         except Exception as exc:
             raise ModelUnavailableError(
                 f"Could not load local {self.model_name} model: {exc}"
@@ -283,6 +288,7 @@ class ISpeakWhisper:
         initial_prompt: str | None = None,
         language: str | None = None,
         condition_on_previous_text: bool = False,
+        audio_duration_seconds: float | None = None,
         **_: Any,
     ) -> dict[str, Any]:
         pipeline_input: Any = audio_data if audio_data is not None else file_path
@@ -300,13 +306,42 @@ class ISpeakWhisper:
         if language in language_codes:
             generate_kwargs["language"] = language_codes[language]
 
-        from audio_analysis_processing_files.whisper_retention import compact_whisper_segments
-        with compact_whisper_segments():
-            output: Any = self.pipe(
-                pipeline_input,
-                return_timestamps="word",
-                generate_kwargs=generate_kwargs,
+        feature_extractor = self.processor.feature_extractor
+        sampling_rate = float(getattr(feature_extractor, 'sampling_rate', 16000))
+        native_samples = float(getattr(feature_extractor, 'n_samples', sampling_rate * 30))
+        native_window_seconds = native_samples / sampling_rate
+        duration = audio_duration_seconds
+        if duration is None and audio_data is not None:
+            samples = audio_data
+            if isinstance(audio_data, dict):
+                samples = audio_data.get('array')
+                sampling_rate = float(audio_data.get('sampling_rate', sampling_rate))
+            try:
+                duration = len(samples) / sampling_rate
+            except (TypeError, ValueError, ZeroDivisionError):
+                duration = None
+        long_form = (isinstance(duration, (int, float)) and not isinstance(duration, bool)
+                     and math.isfinite(duration) and duration > native_window_seconds)
+        if long_form:
+            from audio_analysis_processing_files.whisper_fallback import (
+                COMPRESSION_RATIO_THRESHOLD, TEMPERATURES,
             )
+            generate_kwargs.update(
+                temperature=TEMPERATURES,
+                compression_ratio_threshold=COMPRESSION_RATIO_THRESHOLD,
+            )
+
+        from audio_analysis_processing_files.whisper_fallback import collect_fallback_diagnostics
+        from audio_analysis_processing_files.whisper_retention import compact_whisper_segments
+        started = perf_counter()
+        with collect_fallback_diagnostics(long_form) as decode_segments:
+            with compact_whisper_segments():
+                output: Any = self.pipe(
+                    pipeline_input,
+                    return_timestamps="word",
+                    generate_kwargs=generate_kwargs,
+                )
+        decode_elapsed_seconds = perf_counter() - started
         formatted_words = []
         formatted_segments = []
         full_text = output.get("text", "").strip()
@@ -354,6 +389,11 @@ class ISpeakWhisper:
             "text": full_text,
             "segments": formatted_segments,
             "duration": total_end,
+            "_decoding_diagnostics": {
+                "long_form": long_form,
+                "elapsed_seconds": decode_elapsed_seconds,
+                "segments": decode_segments,
+            },
         }
 
 

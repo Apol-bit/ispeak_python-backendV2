@@ -114,18 +114,24 @@ def load_valid_audio(file_path, max_duration_seconds=MAX_DURATION_SECONDS):
     return y, sample_rate
 
 
+def timestamp_validity_counts(words, duration):
+    """Return the raw word count and the exact count accepted by validation."""
+    tolerance = min(1.0, max(0.25, duration * 0.05))
+    usable = 0
+    for word in words:
+        start, end = word.get('start'), word.get('end')
+        if isinstance(start, (int, float)) and isinstance(end, (int, float)):
+            if np.isfinite(start) and np.isfinite(end) and 0 <= start < end <= duration + tolerance:
+                usable += 1
+    return len(words), usable
+
+
 def validate_transcript(text, words, duration, *, language=None, audio_role='user'):
     tokens = re.findall(r"[\w'-]+", text.lower(), re.UNICODE)
     def reject(rule, phrase_size=0, phrase_repeats=0, phrase_fraction=0.0):
         # Only fixed labels and aggregate numbers are emitted. Never include
         # tokens, word objects, exception text, paths or arbitrary caller input.
-        tolerance = min(1.0, max(0.25, duration * 0.05))
-        usable_count = 0
-        for word in words:
-            start, end = word.get('start'), word.get('end')
-            if isinstance(start, (int, float)) and isinstance(end, (int, float)):
-                if np.isfinite(start) and np.isfinite(end) and 0 <= start < end <= duration + tolerance:
-                    usable_count += 1
+        _, usable_count = timestamp_validity_counts(words, duration)
         most_common_count = Counter(tokens).most_common(1)[0][1] if tokens else 0
         safe_language = language if language in ('English', 'Filipino', 'Taglish') else 'unknown'
         safe_role = audio_role if audio_role in ('user', 'reference') else 'unknown'
@@ -158,12 +164,6 @@ def validate_transcript(text, words, duration, *, language=None, audio_role='use
                     end += size
                 if end-start >= size*6 and (end-start)/len(tokens) >= 0.80:
                     reject('repeated_phrase_dominance', size, (end-start)//size, (end-start)/len(tokens))
-    usable = 0
-    tolerance = min(1.0, max(0.25, duration * 0.05))
-    for word in words:
-        start, end = word.get("start"), word.get("end")
-        if isinstance(start, (int,float)) and isinstance(end, (int,float)):
-            if np.isfinite(start) and np.isfinite(end) and 0 <= start < end <= duration+tolerance:
-                usable += 1
+    _, usable = timestamp_validity_counts(words, duration)
     if usable < max(1, len(words) * 0.5):
         reject('insufficient_usable_timestamps')

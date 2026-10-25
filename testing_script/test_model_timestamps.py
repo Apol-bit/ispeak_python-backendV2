@@ -1,25 +1,22 @@
-"""Exercise the actual adapter method without importing/loading model weights."""
-import ast
-from pathlib import Path
+"""Exercise the actual adapter method without loading model weights."""
 from types import SimpleNamespace
-from typing import Any
 import unittest
 from unittest.mock import Mock
 
 from audio_validation import SpeechValidationError, validate_transcript
+from model import ISpeakWhisper
 from whisper_service import _extract_word_segments
-
-
-tree = ast.parse((Path(__file__).resolve().parents[1] / 'model.py').read_text(encoding='utf-8'))
-adapter = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == 'ISpeakWhisper')
-method = next(n for n in adapter.body if isinstance(n, ast.FunctionDef) and n.name == 'transcribe')
-namespace = {'Any': Any}
-exec(compile(ast.Module(body=[method], type_ignores=[]), 'model.py', 'exec'), namespace)
 
 
 def convert(chunks, text):
     pipe = Mock(return_value={'text': text, 'chunks': chunks})
-    return namespace['transcribe'](SimpleNamespace(pipe=pipe), 'unused', language='English')
+    model = ISpeakWhisper.__new__(ISpeakWhisper)
+    model.pipe = pipe
+    model.processor = SimpleNamespace(
+        feature_extractor=SimpleNamespace(sampling_rate=16000, n_samples=480000),
+    )
+    model.model = SimpleNamespace(device='cpu')
+    return model.transcribe('unused', language='English')
 
 
 class ModelTimestampTests(unittest.TestCase):
