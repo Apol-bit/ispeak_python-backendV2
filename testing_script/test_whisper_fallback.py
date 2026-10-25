@@ -20,6 +20,7 @@ def pipeline_model(output):
     model = ISpeakWhisper.__new__(ISpeakWhisper)
     model.processor = SimpleNamespace(
         feature_extractor=SimpleNamespace(sampling_rate=16000, n_samples=480000),
+        get_prompt_ids=Mock(return_value=torch.tensor([[1, 2, 3]])),
     )
     model.model = SimpleNamespace(device='cpu')
     model.pipe = Mock(return_value=output)
@@ -122,17 +123,20 @@ class WhisperFallbackTests(unittest.TestCase):
         ]}
         short = pipeline_model(output)
         short.transcribe('unused', audio_data=[0.0], language='English',
-                         audio_duration_seconds=30.0)
+                         initial_prompt='short-form filler prompt', audio_duration_seconds=30.0)
         short_kwargs = short.pipe.call_args.kwargs['generate_kwargs']
         self.assertNotIn('temperature', short_kwargs)
         self.assertNotIn('compression_ratio_threshold', short_kwargs)
+        self.assertTrue(torch.equal(short_kwargs['prompt_ids'], torch.tensor([[1, 2, 3]])))
 
         long = pipeline_model(output)
         result = long.transcribe('unused', audio_data=[0.0], language='English',
+                                 initial_prompt='long-form filler prompt',
                                  audio_duration_seconds=30.001)
         long_kwargs = long.pipe.call_args.kwargs['generate_kwargs']
         self.assertEqual(long_kwargs['temperature'], (0.0, 0.2))
         self.assertEqual(long_kwargs['compression_ratio_threshold'], 1.35)
+        self.assertNotIn('prompt_ids', long_kwargs)
         words = _extract_word_segments(result['segments'])
         self.assertEqual((words[0]['start'], words[0]['end']), (0.1001, 0.1004))
 

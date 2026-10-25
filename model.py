@@ -296,12 +296,6 @@ class ISpeakWhisper:
             "task": "transcribe",
             "condition_on_prev_tokens": condition_on_previous_text,
         }
-        if initial_prompt:
-            prompt_ids = self.processor.get_prompt_ids(
-                initial_prompt,
-                return_tensors="pt",
-            )
-            generate_kwargs["prompt_ids"] = prompt_ids.to(self.model.device)
         language_codes = {"English": "en", "Filipino": "tl"}
         if language in language_codes:
             generate_kwargs["language"] = language_codes[language]
@@ -322,6 +316,12 @@ class ISpeakWhisper:
                 duration = None
         long_form = (isinstance(duration, (int, float)) and not isinstance(duration, bool)
                      and math.isfinite(duration) and duration > native_window_seconds)
+        if initial_prompt and not long_form:
+            prompt_ids = self.processor.get_prompt_ids(
+                initial_prompt,
+                return_tensors="pt",
+            )
+            generate_kwargs["prompt_ids"] = prompt_ids.to(self.model.device)
         if long_form:
             from audio_analysis_processing_files.whisper_fallback import (
                 COMPRESSION_RATIO_THRESHOLD, TEMPERATURES,
