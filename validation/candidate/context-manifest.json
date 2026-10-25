@@ -1,5 +1,5 @@
 {
-  "commit": "412d81d35588bd3737a60691a2f498ea877bf899",
+  "commit": "19870b8ebf00b04133e4d2c52fc52946405b4c17",
   "base": "ghcr.io/apol-bit/ispeak-python@sha256:a938fb342d2ef69ad0e6110b4031d41b7ddc9628311f2f50788922a2c034c05e",
   "model_manifest_sha256": "b12f97bc4fff844414b51ba73d027d3de740fe9b532adca159c70b6d15807e86",
   "files": [
@@ -69,6 +69,11 @@
       "sha256": "1d585656998df297698b374b695ea6be52479a9fd1c852447133fad0d062a945"
     },
     {
+      "path": "audio_analysis_processing_files/whisper_fallback.py",
+      "bytes": 5151,
+      "sha256": "2833303b33dc9a5e68b41ecd999e510a14c59b14ce50ffd3a9f91e55a5673528"
+    },
+    {
       "path": "audio_analysis_processing_files/whisper_retention.py",
       "bytes": 4972,
       "sha256": "78f2172c5fa19f36f1240bcddee3aaf155977ba1b1feca9fb83b75bd7701e14d"
@@ -85,8 +90,8 @@
     },
     {
       "path": "audio_validation.py",
-      "bytes": 8533,
-      "sha256": "67ea470178a2b2d8caad313f39559fdcb0cc87a934da64e46951b19b6a03a4c7"
+      "bytes": 8431,
+      "sha256": "21dba898451c9972a7d36a47e1e0569c3189d0fca501db0e552d5878bde9450c"
     },
     {
       "path": "docker/Dockerfile.v6-security-overlay",
@@ -115,13 +120,13 @@
     },
     {
       "path": "model.py",
-      "bytes": 14574,
-      "sha256": "e6c577b15aaa2e6004080a3723cb562ba2e4894b3d6c7f6c0f1cc9a730dd8fdd"
+      "bytes": 16727,
+      "sha256": "6f8a78dfbe5ad255d5734b65115bdf3c23e2d7d49edef75467eb88f051d68393"
     },
     {
       "path": "whisper_service.py",
-      "bytes": 22576,
-      "sha256": "e4829d6c8c71b3511faa7781e5ae56515dc745342668e334523751a49efad802"
+      "bytes": 24978,
+      "sha256": "5e0d2f114ddefed96047d05ac121173542a0a2bf8dd6467b0f41b38205724bfd"
     }
   ],
   "tests": [
@@ -192,8 +197,8 @@
     },
     {
       "path": "testing_script/test_model_timestamps.py",
-      "bytes": 3313,
-      "sha256": "de614bbd7398abe7528047cdbeb88a40d11a9e2f5edd59725825f98e8fd20730"
+      "bytes": 3076,
+      "sha256": "60fd45a20a80d4e22207581a9f84f0d3ca6cd5d2d957e2d0527d368210e1dc12"
     },
     {
       "path": "testing_script/test_paired_evaluation.py",
@@ -239,6 +244,11 @@
       "path": "testing_script/test_whisper_active_chunk.py",
       "bytes": 6293,
       "sha256": "01b4a8d831fbc2a0a93253984ca860bfa58b5f9ce968e1694269945ebbef7198"
+    },
+    {
+      "path": "testing_script/test_whisper_fallback.py",
+      "bytes": 9726,
+      "sha256": "872d1d3bb17d34d4cb583b911a36e09cbe90954c30ee31440fb52dab3c7aa335"
     },
     {
       "path": "testing_script/test_whisper_longform_retention.py",

@@ -113,7 +113,7 @@ class CandidateSafetyTests(unittest.TestCase):
         publication = next(n.lineno for n in calls if n.func.id == 'publish_if_approved')
         self.assertLess(validation, publication)
         self.assertEqual(candidate.RECIPE, 'docker/Dockerfile.v6-security-overlay')
-        self.assertEqual(candidate.SOURCE, '412d81d35588bd3737a60691a2f498ea877bf899')
+        self.assertEqual(candidate.SOURCE, '19870b8ebf00b04133e4d2c52fc52946405b4c17')
 
     def test_no_push_trigger_and_existing_environment(self):
         root = Path(__file__).resolve().parents[2]
@@ -194,12 +194,15 @@ class CandidateSafetyTests(unittest.TestCase):
         names = {v['path'] for v in manifest['files']}
         for path in ['memory_diagnostics.py', 'audio_analysis_processing_files/whisper_timestamps.py',
                      'audio_analysis_processing_files/whisper_retention.py',
+                     'audio_analysis_processing_files/whisper_fallback.py',
                      'audio_analysis_processing_files/articulation/bounded_dtw.py', candidate.RECIPE,
                      'docker/requirements.security.txt']:
             self.assertIn(path, names)
         self.assertFalse(any(p.startswith(('models/', 'testing_script/')) or p.endswith('.wav') for p in names))
         self.assertEqual(len(names), len(manifest['files']))
         self.assertTrue(all(len(v['sha256']) == 64 for v in manifest['files'] + manifest['tests']))
+        tests = {v['path'] for v in manifest['tests']}
+        self.assertIn('testing_script/test_whisper_fallback.py', tests)
 
     def test_model_free_checks_override_entrypoint_and_guard_models(self):
         text = Path(validate_image.__file__).read_text()
@@ -209,9 +212,12 @@ class CandidateSafetyTests(unittest.TestCase):
         self.assertIn('Long-form retention optimization inactive', text)
         self.assertIn('whisper_longform_retention', text)
         self.assertIn('whisper_active_chunk', text)
+        self.assertIn('whisper_fallback', text)
         self.assertIn('Active-chunk optimization inactive', text)
+        self.assertIn('Bounded fallback diagnostics inactive', text)
         self.assertIn('chunk._forward_hooks.values()', text)
-        self.assertIn('result.testsRun==141', text)
+        self.assertIn('result.testsRun==147', text)
+        self.assertIn("'fallback_hook':True", text)
         self.assertIn("len(json.loads(manifest.read_text())['files'])==12", text)
 
 
