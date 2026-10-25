@@ -215,6 +215,10 @@ class CandidateSafetyTests(unittest.TestCase):
         self.assertIn('whisper_fallback', text)
         self.assertIn('Active-chunk optimization inactive', text)
         self.assertIn('Bounded fallback diagnostics inactive', text)
+        self.assertIn(
+            'retention._need_fallback=MethodType(WhisperGenerationMixin._need_fallback,retention)',
+            text,
+        )
         self.assertIn('chunk._forward_hooks.values()', text)
         self.assertIn('result.testsRun==147', text)
         self.assertIn("'fallback_hook':True", text)

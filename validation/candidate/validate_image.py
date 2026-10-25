@@ -40,15 +40,17 @@ assert install_selected_head_timestamps(synthetic), 'Timestamp optimization inac
 assert synthetic._extract_token_timestamps.__func__ is _extract_selected
 from testing_script.test_whisper_longform_retention import owner as retention_owner
 from audio_analysis_processing_files.whisper_retention import install_longform_retention,_generate_with_fallback
+from types import MethodType
+from transformers.models.whisper.generation_whisper import WhisperGenerationMixin
 from transformers.pipelines.automatic_speech_recognition import AutomaticSpeechRecognitionPipeline
 retention=retention_owner()
 assert install_longform_retention(retention,AutomaticSpeechRecognitionPipeline), 'Long-form retention optimization inactive'
 assert retention.generate_with_fallback.__func__ is _generate_with_fallback
+retention._need_fallback=MethodType(WhisperGenerationMixin._need_fallback,retention)
 from audio_analysis_processing_files.whisper_fallback import install_fallback_diagnostics,_generate_with_diagnostics
 assert install_fallback_diagnostics(retention), 'Bounded fallback diagnostics inactive'
 assert retention.generate_with_fallback.__func__ is _generate_with_diagnostics
 import torch
-from types import MethodType
 from transformers.models.whisper.modeling_whisper import WhisperForConditionalGeneration
 from audio_analysis_processing_files.whisper_retention import install_active_chunk_release,_release_self_attentions
 chunk=torch.nn.Module()
