@@ -27,7 +27,7 @@ on:
         required: true
         type: string
       backup_reviewer:
-        description: GitHub login of the distinct backup reviewer who recorded exception approval
+        description: Recorded full name or GitHub login of the distinct backup reviewer who approved the exception
         required: true
         type: string
 permissions:

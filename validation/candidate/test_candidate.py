@@ -39,6 +39,17 @@ class CandidateSafetyTests(unittest.TestCase):
                     with self.assertRaises(RuntimeError):
                         candidate.gate()
 
+    def test_recorded_backup_full_name_preserves_distinct_review(self):
+        with patch.object(candidate.os, 'name', 'posix'), patch.dict(os.environ, approved(), clear=True):
+            with patch.dict(os.environ, {'STAGING_MAINTAINER': 'Apol-bit',
+                                         'STAGING_BACKUP_REVIEWER': 'John Laurence'}):
+                candidate.gate()
+            for backup in ['', ' ', ' maintainer', 'maintainer ', 'MAINTAINER',
+                           'John\nLaurence', 'John\tLaurence']:
+                with self.subTest(backup=backup), patch.dict(os.environ, {'STAGING_BACKUP_REVIEWER': backup}):
+                    with self.assertRaises(RuntimeError):
+                        candidate.gate()
+
     def test_gate_precedes_all_work(self):
         v = candidate.DiagnosticBuild.__new__(candidate.DiagnosticBuild)
         with patch.object(candidate, 'gate', side_effect=RuntimeError('denied')), \

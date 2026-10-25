@@ -60,7 +60,11 @@ def gate():
     if os.name != 'posix' or any(os.environ.get(k) != v for k, v in required.items()):
         raise RuntimeError('Manual hosted execution and explicit staging approvals required')
     reviewers = [os.environ.get(k, '') for k in ['STAGING_MAINTAINER', 'STAGING_BACKUP_REVIEWER']]
-    if any(not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9-]{0,38}', v) for v in reviewers) or reviewers[0].lower() == reviewers[1].lower():
+    maintainer, backup = reviewers
+    if (not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9-]{0,38}', maintainer)
+            or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9 .'-]{0,79}", backup)
+            or backup != backup.strip()
+            or maintainer.casefold() == ' '.join(backup.split()).casefold()):
         raise RuntimeError('Distinct named maintainer/backup acceptance records required')
 
 
