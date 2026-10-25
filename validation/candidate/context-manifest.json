@@ -1,5 +1,5 @@
 {
-  "commit": "e53af32d07419afc04bdfb6c3e00a4d4855cb03b",
+  "commit": "412d81d35588bd3737a60691a2f498ea877bf899",
   "base": "ghcr.io/apol-bit/ispeak-python@sha256:a938fb342d2ef69ad0e6110b4031d41b7ddc9628311f2f50788922a2c034c05e",
   "model_manifest_sha256": "b12f97bc4fff844414b51ba73d027d3de740fe9b532adca159c70b6d15807e86",
   "files": [
@@ -70,8 +70,8 @@
     },
     {
       "path": "audio_analysis_processing_files/whisper_retention.py",
-      "bytes": 3228,
-      "sha256": "38f26d1faaf469b7dd3a00cc0461bda22ebd023338587887bc96b6e71fa52bb2"
+      "bytes": 4972,
+      "sha256": "78f2172c5fa19f36f1240bcddee3aaf155977ba1b1feca9fb83b75bd7701e14d"
     },
     {
       "path": "audio_analysis_processing_files/whisper_timestamps.py",
@@ -115,8 +115,8 @@
     },
     {
       "path": "model.py",
-      "bytes": 14354,
-      "sha256": "743eefef2a64df0c86a6fed3f0655109a3055ed9b727e799bbe7214795047fcd"
+      "bytes": 14574,
+      "sha256": "e6c577b15aaa2e6004080a3723cb562ba2e4894b3d6c7f6c0f1cc9a730dd8fdd"
     },
     {
       "path": "whisper_service.py",
@@ -234,6 +234,11 @@
       "path": "testing_script/test_v6_candidate.py",
       "bytes": 3316,
       "sha256": "e7a8baf1d8d0a3f068e9db5d923412307d96817de23a72dd356e6dc26fd00ad1"
+    },
+    {
+      "path": "testing_script/test_whisper_active_chunk.py",
+      "bytes": 6293,
+      "sha256": "01b4a8d831fbc2a0a93253984ca860bfa58b5f9ce968e1694269945ebbef7198"
     },
     {
       "path": "testing_script/test_whisper_longform_retention.py",

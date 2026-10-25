@@ -113,7 +113,7 @@ class CandidateSafetyTests(unittest.TestCase):
         publication = next(n.lineno for n in calls if n.func.id == 'publish_if_approved')
         self.assertLess(validation, publication)
         self.assertEqual(candidate.RECIPE, 'docker/Dockerfile.v6-security-overlay')
-        self.assertEqual(candidate.SOURCE, 'e53af32d07419afc04bdfb6c3e00a4d4855cb03b')
+        self.assertEqual(candidate.SOURCE, '412d81d35588bd3737a60691a2f498ea877bf899')
 
     def test_no_push_trigger_and_existing_environment(self):
         root = Path(__file__).resolve().parents[2]
@@ -208,7 +208,10 @@ class CandidateSafetyTests(unittest.TestCase):
         self.assertIn('Timestamp optimization inactive', text)
         self.assertIn('Long-form retention optimization inactive', text)
         self.assertIn('whisper_longform_retention', text)
-        self.assertIn('result.testsRun==135', text)
+        self.assertIn('whisper_active_chunk', text)
+        self.assertIn('Active-chunk optimization inactive', text)
+        self.assertIn('chunk._forward_hooks.values()', text)
+        self.assertIn('result.testsRun==141', text)
         self.assertIn("len(json.loads(manifest.read_text())['files'])==12", text)
 
 
