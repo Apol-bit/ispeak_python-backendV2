@@ -102,7 +102,7 @@ class CandidateSafetyTests(unittest.TestCase):
         publication = next(n.lineno for n in calls if n.func.id == 'publish_if_approved')
         self.assertLess(validation, publication)
         self.assertEqual(candidate.RECIPE, 'docker/Dockerfile.v6-security-overlay')
-        self.assertEqual(candidate.SOURCE, '1f000522a308ce515db314ef423b32c220c9e32e')
+        self.assertEqual(candidate.SOURCE, 'e53af32d07419afc04bdfb6c3e00a4d4855cb03b')
 
     def test_no_push_trigger_and_existing_environment(self):
         root = Path(__file__).resolve().parents[2]
@@ -182,6 +182,7 @@ class CandidateSafetyTests(unittest.TestCase):
         self.assertEqual(manifest['base'], candidate.BASE)
         names = {v['path'] for v in manifest['files']}
         for path in ['memory_diagnostics.py', 'audio_analysis_processing_files/whisper_timestamps.py',
+                     'audio_analysis_processing_files/whisper_retention.py',
                      'audio_analysis_processing_files/articulation/bounded_dtw.py', candidate.RECIPE,
                      'docker/requirements.security.txt']:
             self.assertIn(path, names)
@@ -194,6 +195,9 @@ class CandidateSafetyTests(unittest.TestCase):
         self.assertIn("'--entrypoint=python'", text)
         self.assertIn('Model loading forbidden', text)
         self.assertIn('Timestamp optimization inactive', text)
+        self.assertIn('Long-form retention optimization inactive', text)
+        self.assertIn('whisper_longform_retention', text)
+        self.assertIn('result.testsRun==135', text)
         self.assertIn("len(json.loads(manifest.read_text())['files'])==12", text)
 
 
