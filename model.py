@@ -57,6 +57,15 @@ class ModelUnavailableError(RuntimeError):
     """Raised when required local model files or runtime packages are absent."""
 
 
+def configured_whisper_backend(env=None) -> str:
+    """Select saved adapter weights or the existing unadapted base, explicitly."""
+    env = os.environ if env is None else env
+    backend = env.get('ISPEAK_WHISPER_BACKEND', 'adapted')
+    if backend not in ('adapted', 'base'):
+        raise ModelUnavailableError('Invalid Whisper transcription backend')
+    return backend
+
+
 def configured_adapter_path(model_path: str | Path | None = None) -> Path:
     """Return the configured adapter path without requiring it to exist."""
     configured = model_path
@@ -197,18 +206,19 @@ def resolve_model_path(model_path: str | Path | None = None) -> Path:
 
 
 class ISpeakWhisper:
-    """Whisper with the selected local iSpeak LoRA adapter merged for inference."""
+    """Whisper with explicit local adapted/base transcription weight selection."""
 
     def __init__(
         self,
         model_path: str | Path | None = None,
         base_model_path: str | Path | None = None,
     ):
+        self.backend = configured_whisper_backend()
         self.adapter_path, self.base_model_path = resolve_model_paths(
             model_path,
             base_model_path,
         )
-        self.model_name = self.adapter_path.name
+        self.model_name = self.adapter_path.name if self.backend == 'adapted' else 'whisper-small-base'
         self.base_model_id = declared_base_model_id(self.adapter_path)
 
         try:
@@ -231,8 +241,8 @@ class ISpeakWhisper:
         if os.getenv("ISPEAK_ENV", "development").lower() == "production":
             print(f"Loading speech model on {device_label}...")
         else:
-            print(f"Loading {self.model_name} adapter from {self.adapter_path} "
-                  f"with base model {self.base_model_path} on {device_label}...")
+            print(f"Loading {self.model_name} with processor {self.adapter_path} "
+                  f"and base model {self.base_model_path} on {device_label}...")
 
         try:
             # Transformers and PEFT expose these through dynamic factory APIs;
@@ -246,13 +256,18 @@ class ISpeakWhisper:
                 str(self.base_model_path),
                 local_files_only=True,
             )
-            adapted_model: Any = PeftModel.from_pretrained(
-                base_model,
-                str(self.adapter_path),
-                is_trainable=False,
-                local_files_only=True,
-            )
-            self.model: Any = adapted_model.merge_and_unload(safe_merge=True)
+            if self.backend == 'adapted':
+                adapted_model: Any = PeftModel.from_pretrained(
+                    base_model,
+                    str(self.adapter_path),
+                    is_trainable=False,
+                    local_files_only=True,
+                )
+                self.model: Any = adapted_model.merge_and_unload(safe_merge=True)
+            else:
+                # Keep the existing processor/alignment/runtime controls. Only
+                # omit the LoRA merge; the verified saved base is not modified.
+                self.model = base_model
             self.model.eval()
             from audio_analysis_processing_files.whisper_timestamps import install_selected_head_timestamps
             install_selected_head_timestamps(self.model)

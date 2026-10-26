@@ -37,8 +37,17 @@ def _need_fallback(self, seek_sequence, seek_outputs, index, logits_processor,
         self, seek_sequence, seek_outputs, index, logits_processor,
         generation_config, vocab_size, temperature,
     )
+    segment = _CURRENT_SEGMENT.get()
+    if segment is not None:
+        # Upstream returns the final sequence even if it still needs fallback.
+        # Preserve that decision separately from optional ratio/timing telemetry.
+        # At each temperature the batch contains only items still being retried;
+        # any remaining failure on the last attempt makes this window unusable.
+        if segment.get('_decision_temperature') != temperature:
+            segment['fallback_exhausted'] = False
+        segment['_decision_temperature'] = temperature
+        segment['fallback_exhausted'] = segment['fallback_exhausted'] or bool(result[0])
     try:
-        segment = _CURRENT_SEGMENT.get()
         if segment is not None:
             ratio = None
             if generation_config.compression_ratio_threshold is not None:
@@ -64,6 +73,7 @@ def _now():
 
 
 def _finish_segment(segment, started):
+    segment.pop('_decision_temperature', None)
     try:
         finished = _now()
         segment['elapsed_seconds'] = (
@@ -93,7 +103,7 @@ def _generate_with_diagnostics(self, *args, **kwargs):
         return original(self, *args, **kwargs)
 
     try:
-        segment = {'segment_index': len(records), 'attempts': []}
+        segment = {'segment_index': len(records), 'attempts': [], 'fallback_exhausted': False}
         records.append(segment)
         token = _CURRENT_SEGMENT.set(segment)
     except Exception:

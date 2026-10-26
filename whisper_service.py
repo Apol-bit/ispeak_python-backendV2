@@ -8,7 +8,7 @@ from contextlib import contextmanager
 import librosa
 from memory_diagnostics import memory_stage, memory_metadata
 from audio_validation import (MIN_RMS, SpeechValidationError, load_valid_audio,
-                              timestamp_validity_counts, validate_audio, validate_transcript)
+                              insufficient, timestamp_validity_counts, validate_audio, validate_transcript)
 from difflib import SequenceMatcher
 from typing import Any, Dict, List
 
@@ -66,9 +66,9 @@ def _log_decode_diagnostics(diagnostics, words, duration, audio_role):
             logger.info(
                 'whisper_decode_segment role=%s segment_index=%d '
                 'compression_ratio_initial=%.6f compression_ratio_final=%.6f '
-                'retry_count=%d elapsed_seconds=%.6f elapsed_available=%s',
+                'retry_count=%d elapsed_seconds=%.6f elapsed_available=%s fallback_exhausted=%s',
                 safe_role, index, initial, final, retry_count, elapsed,
-                str(elapsed_available).lower(),
+                str(elapsed_available).lower(), str(segment.get('fallback_exhausted') is True).lower(),
             )
         timestamp_total, timestamp_usable = timestamp_validity_counts(words, duration)
         decode_elapsed = (float(diagnostics.get('elapsed_seconds', 0.0))
@@ -83,6 +83,21 @@ def _log_decode_diagnostics(diagnostics, words, duration, audio_role):
     except Exception:
         # Telemetry failures must not change transcription or scoring.
         pass
+
+
+def _validate_decode_windows(diagnostics, audio_role):
+    """Refuse scoring of an exhausted decode; never discard or repair its words."""
+    if not isinstance(diagnostics, dict) or diagnostics.get('long_form') is not True:
+        return
+    failed = sum(segment.get('fallback_exhausted') is True
+                 for segment in diagnostics.get('segments', []))
+    if failed:
+        safe_role = audio_role if audio_role in ('user', 'reference') else 'unknown'
+        logger.warning(
+            'whisper_decode_rejected code=insufficient_speech role=%s '
+            'rule=exhausted_compression_fallback failed_windows=%d', safe_role, failed,
+        )
+        raise insufficient()
 
 # Compatibility exports used by the standalone evaluation utility.
 # Validation is enforced by audio_validation before ASR and scoring.
@@ -255,6 +270,7 @@ def _run_analysis(
         audio_duration, audio_role,
     )
     with _validation_stage(audio_role, 'transcript_validation'):
+        _validate_decode_windows(transcription.get('_decoding_diagnostics', {}), audio_role)
         validate_transcript(text, word_segments, audio_duration,
                             language=language, audio_role=audio_role)
 
