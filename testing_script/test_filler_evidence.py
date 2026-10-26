@@ -22,6 +22,11 @@ class FillerEvidenceTests(unittest.TestCase):
             self.assertEqual(r['filler_words'][0]['confidence'], .95)
             self.assertEqual(r['coverage']['status'], 'matched')
             r = self.analyze(text, [{**positive, 'score': .59}])
+            if text.startswith('um'):
+                # Clear hesitation forms do not depend on model confidence.
+                self.assertEqual(r['filler_count'], 1)
+                self.assertIsNone(r['filler_words'][0]['confidence'])
+                continue
             self.assertEqual(r['filler_count'], 0)
             self.assertGreaterEqual(r['candidate_count'], 1)
             self.assertEqual(r['filler_candidates'][0]['confidence'], .59)

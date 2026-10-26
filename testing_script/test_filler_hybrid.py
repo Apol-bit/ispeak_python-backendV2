@@ -48,10 +48,12 @@ class HybridFillerTests(unittest.TestCase):
         self.assertEqual([w['word'].casefold() for w in result['filler_words']], ['um', 'uh'])
         self.assertNotEqual(result['filler_words'][0]['start'], result['filler_words'][1]['start'])
 
-    def test_boundary_hesitation_is_not_confirmed_from_one_pause_alone(self):
+    def test_boundary_hesitation_is_confirmed_without_pause_gaps(self):
+        # Real Whisper word times are contiguous inside a segment, so a
+        # sentence-initial "Um," never shows a following gap.
         result = run(case('E01'))
-        self.assertEqual(result['filler_count'], 0)
-        self.assertIn('Um', [c['word'] for c in result['filler_candidates']])
+        self.assertEqual([w['word'] for w in result['filler_words']], ['Um'])
+        self.assertEqual(result['filler_candidates'], [])
 
     def test_grammatical_controls_with_identical_pause_evidence_not_penalized(self):
         for item in FIXTURES:
@@ -95,19 +97,32 @@ class HybridFillerTests(unittest.TestCase):
         self.assertFalse(valid_timing(item['word_segments']))
         self.assertEqual(run(item)['filler_count'], 0)
 
-    def test_repetition_or_punctuation_without_pause_gaps_does_not_confirm(self):
-        item = case('F01')
+    @staticmethod
+    def contiguous(item):
+        # Real Whisper word spans touch inside a segment: no observable gaps.
         for i, word in enumerate(item['word_segments']):
-            word.update(start=i * .2, end=i * .2 + .15)
-        self.assertEqual(run(item)['filler_count'], 0)
+            word.update(start=i * .3, end=(i + 1) * .3)
+        return item
 
-    def test_existing_pause_threshold_is_required_on_both_sides(self):
-        for gap, expected in [(.349, 0), (.35, 1)]:
-            item = case('F01')
-            words = item['word_segments']
-            # Candidate ano is word 2; shift it to change only the left gap.
-            words[2]['start'] = words[1]['end'] + gap
-            self.assertEqual(run(item)['filler_count'], expected)
+    def test_restart_confirms_with_contiguous_real_style_timing(self):
+        for identifier in ['E02', 'E03', 'F01', 'F02', 'F08', 'T01', 'T07', 'T08']:
+            with self.subTest(identifier=identifier):
+                result = run(self.contiguous(case(identifier)))
+                self.assertEqual(result['filler_count'], 1)
+                self.assertIn('restart', result['filler_words'][0]['reason'])
+
+    def test_restart_shaped_grammatical_controls_stay_vetoed_without_gaps(self):
+        for item in FIXTURES:
+            if any(a['label'] in {'grammatical', 'ambiguous'} for a in item['annotations']):
+                with self.subTest(identifier=item['id']):
+                    self.assertEqual(run(self.contiguous(copy.deepcopy(item)))['filler_count'], 0)
+
+    def test_repetition_without_punctuated_restart_does_not_confirm(self):
+        for text in ['Ang plano ano ang plano natin ay magsanay.', 'I was like I was trying.',
+                     'We should, you know what to do, we should.']:
+            words = [dict(text=w, start=i * .3, end=(i + 1) * .3) for i, w in enumerate(text.split())]
+            item = dict(transcript=text, language='Taglish', word_segments=words)
+            self.assertEqual(run(item)['filler_count'], 0, text)
 
     def test_coverage_mismatch_disables_complementary_confirmation(self):
         item = case('F01')
@@ -202,6 +217,86 @@ class HybridFillerTests(unittest.TestCase):
         self.assertFalse(result['analysis_available'])
         self.assertIsNone(result['filler_score'])
         self.assertEqual(result['filler_count'], 0)
+
+
+def observed(words, text=None):
+    """Word times copied from real-recording Whisper output (contiguous spans)."""
+    segments = [dict(text=' ' + w, start=s, end=e) for w, s, e in words]
+    return segments, text or ' '.join(w for w, _, _ in words)
+
+
+class RealTimingHesitationTests(unittest.TestCase):
+    """Excerpts of real phone/app replays; predictions are the classifier's observed output."""
+
+    def test_subword_model_filler_on_umm_is_confirmed_as_whole_word(self):
+        # English iPhone recording: the model labelled only 'mm' (0.999), which
+        # the whole-word guard rejects; the after-gap was 0.00 s.
+        segments, text = observed([('I', 6.02, 6.20), ('speak.', 6.20, 7.42), ('Umm,', 7.56, 9.08),
+                                   ('our', 9.08, 9.32), ('application', 9.32, 9.82)])
+        start = text.index('Umm') + 1
+        result = analyze_fillers(segments, full_transcript=text, classifier=lambda _: [
+            dict(entity_group='FILLER', start=start, end=start + 2, score=.9990)])
+        self.assertEqual([(w['word'], w['start'], w['end']) for w in result['filler_words']],
+                         [('Umm', 7.56, 9.08)])
+        self.assertEqual(result['filler_candidates'], [])
+
+    def test_unpunctuated_long_form_um_below_model_threshold_is_confirmed(self):
+        # Long-form English replay (no prompt, no punctuation): FILLER 0.4025.
+        segments, text = observed([('tough', 40.1, 40.6), ('so', 40.6, 41.0), ('um', 41.0, 41.9),
+                                   ('I', 41.9, 42.1), ('guess', 42.1, 42.5)])
+        start = text.index(' um')
+        result = analyze_fillers(segments, full_transcript=text, classifier=lambda _: [
+            dict(entity_group='CONTEXT_WORD', start=text.index('so'), end=text.index('so') + 2, score=.547),
+            dict(entity_group='FILLER', start=start, end=start + 3, score=.4025)])
+        self.assertEqual([w['word'] for w in result['filler_words']], ['um'])
+        self.assertIsNone(result['filler_words'][0]['confidence'])
+        self.assertEqual([c['word'] for c in result['filler_candidates']], ['so', 'I guess'])
+        self.assertEqual(result['threshold'], .60)
+
+    def test_hesitations_confirmed_in_three_languages_with_zero_gaps(self):
+        for text, expected in [('Today I speak. Um, our application helps.', ['Um']),
+                               ('Ang project ay ito. Ah, um, ginawa namin ito.', ['um']),
+                               ('Gusto kong i-share uh this project namin.', ['uh'])]:
+            with self.subTest(text=text):
+                words = text.split()
+                segments, _ = observed([(w, i * .3, (i + 1) * .3) for i, w in enumerate(words)])
+                result = analyze_fillers(segments, full_transcript=text, classifier=lambda _: [])
+                self.assertEqual([w['word'] for w in result['filler_words']], expected)
+                self.assertEqual(result['filler_score'], round(max(0, 100 - result['filler_rate'] * 4)))
+
+    def test_elongated_hesitation_spelling_is_recognized(self):
+        segments, text = observed([('Ummmm,', 0, .9), ('UHHH', .9, 1.5), ('we', 1.5, 1.7), ('start.', 1.7, 2.1)])
+        result = analyze_fillers(segments, full_transcript=text, classifier=lambda _: [])
+        self.assertEqual([w['word'] for w in result['filler_words']], ['Ummmm', 'UHHH'])
+
+    def test_hesitation_rule_rejects_subwords_mentions_and_invalid_timing(self):
+        for text, fragment in [('Pumunta kami sa human umbrella store.', 'um'), ('Uh-huh, tama.', 'Uh'),
+                               ("Hindi um's ito.", 'um')]:
+            words = text.split()
+            segments, _ = observed([(w, i * .3, (i + 1) * .3) for i, w in enumerate(words)])
+            start = text.index(fragment)
+            result = analyze_fillers(segments, full_transcript=text, classifier=lambda _: [
+                dict(entity_group='FILLER', start=start, end=start + 2, score=.9964)])
+            self.assertEqual(result['filler_count'], 0, text)
+        for text in ["The word 'um' is common.", 'Say the word um slowly.']:
+            words = text.split()
+            segments, _ = observed([(w, i * .3, (i + 1) * .3) for i, w in enumerate(words)])
+            start = text.index('um')
+            result = analyze_fillers(segments, full_transcript=text, classifier=lambda _: [
+                dict(entity_group='FILLER', start=start, end=start + 2, score=.40)])
+            self.assertEqual(result['filler_count'], 0, text)
+            self.assertTrue(any('metalinguistic' in c['reason'] for c in result['filler_candidates']))
+        segments, text = observed([('Um,', 0, 0), ('we', 0, .3), ('start.', .3, .6)])
+        self.assertEqual(analyze_fillers(segments, full_transcript=text, classifier=lambda _: [])['filler_count'], 0)
+
+    def test_ambiguous_markers_stay_review_only_with_real_contiguous_timing(self):
+        # Observed Taglish/English contexts: Kasi, you know, So and You know remain candidates.
+        segments, text = observed([('Filipino.', 13.86, 14.78), ('Kasi,', 15.16, 15.76), ('you', 15.76, 16.32),
+                                   ('know,', 16.32, 17.12), ('maraming', 17.12, 17.40), ('students.', 17.40, 17.78),
+                                   ('So,', 22.38, 23.42), ('our', 23.42, 23.58), ('goal.', 23.58, 24.06)])
+        result = analyze_fillers(segments, full_transcript=text, classifier=lambda _: [])
+        self.assertEqual(result['filler_count'], 0)
+        self.assertEqual([c['word'] for c in result['filler_candidates']], ['Kasi', 'you know', 'So'])
 
 
 class MetricAccountingTests(unittest.TestCase):

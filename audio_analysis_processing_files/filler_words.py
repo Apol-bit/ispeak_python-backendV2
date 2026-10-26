@@ -11,7 +11,7 @@ from __future__ import annotations
 import os
 from audio_analysis_processing_files.word_alignment import WORD, reconstruct_words, word_tokens
 from audio_analysis_processing_files.filler_vocabulary import VOCABULARY
-from audio_analysis_processing_files.filler_context import confirmation_reason, explicit_mention, valid_timing
+from audio_analysis_processing_files.filler_context import clear_hesitation, confirmation_reason, explicit_mention, valid_timing
 import threading
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Protocol
@@ -256,9 +256,14 @@ def _analyze_fillers(
         start, end = int(prediction.get('start', 0)), int(prediction.get('end', 0))
         if any(a < end and b > start for a, b in occupied):
             continue
-        occupied.append((start, end))
         mention = explicit_mention(transcript, start, end)
-        if label == "FILLER" and item["confidence"] >= minimum_confidence and not mention:
+        confirmed = label == "FILLER" and item["confidence"] >= minimum_confidence and not mention
+        if not confirmed and not mention and clear_hesitation(transcript[start:end]):
+            # Model uncertainty on um/uh is not a grammatical reading; the
+            # vocabulary pass below applies the clear-hesitation rule.
+            continue
+        occupied.append((start, end))
+        if confirmed:
             fillers.append(item)
         else:
             item["reason"] = ('quoted or metalinguistic use; not confirmed as speaker hesitation'

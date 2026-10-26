@@ -81,7 +81,8 @@ class WordAlignmentTests(unittest.TestCase):
         # Previously inspected container durations; arithmetic replay only.
         # A future decoded sample duration/model rerun may differ.
         for text, duration, count, articulation, expected_filler, expected_pace, expected_clarity, expected_overall in [
-            (FILIPINO, 26.069333, 50, 92, 84, 95.9, 89, 94.2),
+            # The uncovered second "um" (after "uh") is a clear hesitation: 3 spans.
+            (FILIPINO, 26.069333, 50, 92, 76, 95.9, 86, 93.0),
             (TAGLISH, 28.202667, 53, 90.2, 85, 94.0, 88, 93.1),
         ]:
             raw = text.replace('i-speak', 'i -speak').replace('i-ginawa', 'i -ginawa').replace('mag-sayta', 'mag -sayta').replace('i-share', 'i -share').replace('mag-salita', 'mag -salita')

@@ -34,8 +34,9 @@ ADDITIONAL_REVIEW_PHRASES = frozenset({'as in'})
 _TERMS = sorted(ENGLISH | FILIPINO | ADDITIONAL_REVIEW_PHRASES, key=lambda term: (-len(term.split()), -len(term), term))
 # Apostrophes inside a lexical unit block substring matches; surrounding quotes
 # allow recognition for review (the evidence rules exclude quoted mentions).
+# Elongated um/uh spellings (e.g. "Ummmm") follow filler_context's hesitation form.
 VOCABULARY = re.compile(
     r"(?<![\w\-])(?<!\w['\u2019])(?:"
     + '|'.join(r'\s+'.join(map(re.escape, term.split())) for term in _TERMS)
-    + r")(?![\w\-]|['\u2019]\w)", re.IGNORECASE,
+    + r"|u(?:m+|h+m*))(?![\w\-]|['\u2019]\w)", re.IGNORECASE,
 )

@@ -3,7 +3,6 @@ import math
 import re
 
 from audio_analysis_processing_files.word_alignment import WORD
-from audio_analysis_processing_files.vocal_variety.temporal_pauses import MIN_PAUSE_SECONDS
 
 _CLEAR_HESITATION = re.compile(r'u(?:m+|h+m*)\Z', re.IGNORECASE)
 _RESTART_MARKERS = frozenset({
@@ -21,6 +20,12 @@ _COMPARISON = frozenset({
     'mukha', 'mukhang', 'tila',
 })
 _COMPARISON_TIME = frozenset({'before', 'previously', 'yesterday', 'dati', 'noon', 'kahapon'})
+
+
+def clear_hesitation(text):
+    """True for a single non-lexical um/uh form, which has no grammatical reading."""
+    tokens = WORD.findall(text)
+    return len(tokens) == 1 and bool(_CLEAR_HESITATION.fullmatch(tokens[0]))
 
 
 def valid_timing(segments):
@@ -60,31 +65,21 @@ def explicit_mention(text, start, end):
 
 
 def confirmation_reason(text, match, aligned_words, timing_available):
-    """Confirm only narrow lexical/timing patterns; return None to abstain.
+    """Confirm only narrow lexical patterns with valid timing; return None to abstain.
 
-    Ambiguous markers require a punctuated, two-token identical restart AND two
-    pause gaps. Neither repetition alone nor a pause alone confirms them.
+    Pause gaps are not required: Whisper word times are contiguous within a
+    decoding segment, so a hesitation's silence is absorbed into a word's
+    duration and is not observable as a gap. Clear um/uh forms are confirmed.
+    Ambiguous markers require a punctuated, two-token identical restart and
+    pass the mention, question and comparison vetoes; a marker alone does not.
     'as in' and the remaining recovered vocabulary stay review-only.
     """
     if not timing_available or explicit_mention(text, match.start(), match.end()):
         return None
-    indices = [i for i, word in enumerate(aligned_words)
-               if word['char_start'] < match.end() and word['char_end'] > match.start()]
-    if not indices or indices[-1] + 1 >= len(aligned_words):
-        return None
-    first, last = indices[0], indices[-1]
-    after = aligned_words[last + 1]['start'] - aligned_words[last]['end']
-    before = aligned_words[first]['start'] - aligned_words[first - 1]['end'] if first else None
-    separated_after = after + 1e-6 >= MIN_PAUSE_SECONDS
-    separated_before = before is not None and before + 1e-6 >= MIN_PAUSE_SECONDS
+    if clear_hesitation(match.group()):
+        return 'non-lexical hesitation form (um/uh) with structurally valid word timing'
     term = ' '.join(match.group().casefold().split())
-    if _CLEAR_HESITATION.fullmatch(term):
-        # No leading/trailing audio boundary is inferred from word timestamps.
-        # Boundary hesitations remain model-confirmed or review-only.
-        if separated_after and separated_before:
-            return 'transcript hesitation form with structurally valid timestamp separation'
-        return None
-    if term not in _RESTART_MARKERS or not (separated_before and separated_after):
+    if term not in _RESTART_MARKERS:
         return None
     tokens = list(WORD.finditer(text))
     left = [m for m in tokens if m.end() <= match.start()]
@@ -108,4 +103,4 @@ def confirmation_reason(text, match, aligned_words, timing_available):
     if term in {'like', 'parang'} and (
             _COMPARISON.intersection(left_words[-3:]) or _COMPARISON_TIME.intersection(right_words[:8])):
         return None
-    return 'bilingual punctuated two-token restart with two structurally valid timestamp pause gaps'
+    return 'bilingual punctuated two-token restart with structurally valid word timing'

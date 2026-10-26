@@ -17,8 +17,9 @@ class FillerRegressionTests(unittest.TestCase):
         text = 'UM, You KNOW what I mean; ALAM   MO BA? so ayun.'
         self.assertEqual([m.group().casefold() for m in VOCABULARY.finditer(text)],
                          ['um', 'you know what i mean', 'alam   mo ba', 'so ayun'])
-        self.assertEqual(len(analyze(text)['filler_candidates']), 4)
-        self.assertEqual(analyze(text)['filler_count'], 0)
+        # UM is a clear hesitation; the three ambiguous phrases stay review-only.
+        self.assertEqual(len(analyze(text)['filler_candidates']), 3)
+        self.assertEqual([w['word'] for w in analyze(text)['filler_words']], ['UM'])
 
     def test_word_boundaries_never_promote_subwords(self):
         for text, fragment in [('pumunta', 'um'), ('someone', 'so'), ('i-share', 'share')]:
@@ -67,9 +68,10 @@ class FillerRegressionTests(unittest.TestCase):
     def test_low_confidence_and_grouped_phrase_remain_unpenalized(self):
         text = 'You know, um, hello.'
         result = analyze(text, [dict(entity_group='FILLER', start=0, end=8, score=.59)])
-        self.assertEqual(result['filler_count'], 0)
-        self.assertEqual(len(result['filler_candidates']), 2)
-        self.assertEqual(result['filler_score'], 100)
+        # The low-confidence phrase stays review-only; um is a clear hesitation.
+        self.assertEqual([c['word'] for c in result['filler_candidates']], ['You know,'])
+        self.assertEqual(result['filler_candidates'][0]['confidence'], .59)
+        self.assertEqual([w['word'] for w in result['filler_words']], ['um'])
 
     def test_language_names_and_codes_do_not_gate_recognition(self):
         for language in ['English', 'Filipino', 'Taglish', 'tl', 'fil', 'en', None]:
