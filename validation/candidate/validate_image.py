@@ -58,13 +58,13 @@ chunk.forward=MethodType(WhisperForConditionalGeneration.forward,chunk)
 chunk._ispeak_retention_original=retention._ispeak_retention_original
 assert install_active_chunk_release(chunk), 'Active-chunk optimization inactive'
 assert any(h is _release_self_attentions for h in chunk._forward_hooks.values())
-names='admission analysis_components assessment_details audio_transport_metadata bounded_dtw container_admission dependency_security filler_evidence input_validation memory_diagnostics model_integrity model_timestamps paired_evaluation readiness recording_duration reference_validation security_hardening timestamp_rejection transcript_diagnostics v6_candidate whisper_timestamp_memory whisper_longform_retention whisper_active_chunk whisper_fallback word_alignment'.split()
+names='admission analysis_components assessment_details audio_transport_metadata bounded_dtw container_admission dependency_security filler_evidence filler_regression input_validation memory_diagnostics model_integrity model_timestamps paired_evaluation readiness recording_duration reference_validation security_hardening timestamp_rejection transcript_diagnostics v6_candidate whisper_timestamp_memory whisper_longform_retention whisper_active_chunk whisper_fallback word_alignment'.split()
 for flag in ['false','true']:
  os.environ['ISPEAK_MEMORY_DIAGNOSTICS']=flag
  with patch.object(model.ISpeakWhisper,'__init__',side_effect=AssertionError('Model loading forbidden')), patch.object(filler_words.LocalTokenFillerClassifier,'__init__',side_effect=AssertionError('Model loading forbidden')):
   suite=unittest.defaultTestLoader.loadTestsFromNames(['testing_script.test_'+n for n in names])
   result=unittest.TextTestRunner(verbosity=0).run(suite)
-  assert result.wasSuccessful() and result.testsRun==154
+  assert result.wasSuccessful() and result.testsRun==163
  # Loader-contract tests invoke the real constructor with fully mocked factories.
  # Keep the original constructor prohibition above for every other suite, and
  # independently forbid all weight loading and pipeline creation here.
@@ -72,7 +72,7 @@ for flag in ['false','true']:
   backend=unittest.defaultTestLoader.loadTestsFromName('testing_script.test_whisper_backend')
   backend_result=unittest.TextTestRunner(verbosity=0).run(backend)
   assert backend_result.wasSuccessful() and backend_result.testsRun==4
-print(json.dumps({'model_free_tests_each_mode':158,'hook_active':True,'active_chunk_hook':True,'fallback_hook':True,'model_manifest_files':12,'inference':False}))
+print(json.dumps({'model_free_tests_each_mode':167,'hook_active':True,'active_chunk_hook':True,'fallback_hook':True,'model_manifest_files':12,'inference':False}))
 '''
     mount_args = []
     for source, target in [(tests / 'testing_script', '/app/testing_script'),
@@ -88,10 +88,10 @@ print(json.dumps({'model_free_tests_each_mode':158,'hook_active':True,'active_ch
                      *mount_args, '--entrypoint=python', v.image, '-B', '-c', code,
                      json.dumps(hashes), manifest['model_manifest_sha256'], seconds=600)
     summary = json.loads(result.decode().strip().splitlines()[-1])
-    if summary != {'model_free_tests_each_mode': 158, 'hook_active': True, 'active_chunk_hook': True,
+    if summary != {'model_free_tests_each_mode': 167, 'hook_active': True, 'active_chunk_hook': True,
                    'fallback_hook': True, 'model_manifest_files': 12, 'inference': False}:
         raise RuntimeError('Incomplete model-free evidence')
-    v.evidence('model_free_image', result='PASS', tests_each_mode=158,
+    v.evidence('model_free_image', result='PASS', tests_each_mode=167,
                dependency_changes=sorted(targets), model_files=12, hook_active=True,
                active_chunk_hook=True, fallback_hook=True,
                inventory_sha256=hashlib.sha256(json.dumps(candidate, sort_keys=True).encode()).hexdigest(),
