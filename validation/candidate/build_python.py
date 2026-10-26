@@ -18,7 +18,7 @@ from materialize import BASE
 from preflight import enforce
 from runner import Validation
 
-SOURCE = 'b210402897e08fb1f6d60dbc24134eca7a3b8aa0'
+SOURCE = 'ee7266e443f87d116bb5260a641724880202b0f5'
 BRANCH = 'refs/heads/ci/validate-python-a76c6f47-20261021'
 RECIPE = 'docker/Dockerfile.v6-security-overlay'
 MANIFEST = Path(__file__).with_name('context-manifest.json')

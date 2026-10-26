@@ -113,7 +113,7 @@ class CandidateSafetyTests(unittest.TestCase):
         publication = next(n.lineno for n in calls if n.func.id == 'publish_if_approved')
         self.assertLess(validation, publication)
         self.assertEqual(candidate.RECIPE, 'docker/Dockerfile.v6-security-overlay')
-        self.assertEqual(candidate.SOURCE, 'b210402897e08fb1f6d60dbc24134eca7a3b8aa0')
+        self.assertEqual(candidate.SOURCE, 'ee7266e443f87d116bb5260a641724880202b0f5')
 
     def test_no_push_trigger_and_existing_environment(self):
         root = Path(__file__).resolve().parents[2]
@@ -192,7 +192,9 @@ class CandidateSafetyTests(unittest.TestCase):
         self.assertEqual(manifest['commit'], candidate.SOURCE)
         self.assertEqual(manifest['base'], candidate.BASE)
         names = {v['path'] for v in manifest['files']}
-        for path in ['memory_diagnostics.py', 'audio_analysis_processing_files/whisper_timestamps.py',
+        for path in ['audio_analysis_processing_files/filler_context.py',
+                     'audio_analysis_processing_files/filler_vocabulary.py', 'memory_diagnostics.py',
+                     'audio_analysis_processing_files/whisper_timestamps.py',
                      'audio_analysis_processing_files/whisper_retention.py',
                      'audio_analysis_processing_files/whisper_fallback.py',
                      'audio_analysis_processing_files/articulation/bounded_dtw.py', candidate.RECIPE,
@@ -202,6 +204,9 @@ class CandidateSafetyTests(unittest.TestCase):
         self.assertEqual(len(names), len(manifest['files']))
         self.assertTrue(all(len(v['sha256']) == 64 for v in manifest['files'] + manifest['tests']))
         tests = {v['path'] for v in manifest['tests']}
+        for path in ['testing_script/test_filler_hybrid.py', 'testing_script/evaluate_filler_hybrid.py',
+                     'testing_script/fixtures/filler_hybrid_labeled.json']:
+            self.assertIn(path, tests)
         self.assertIn('testing_script/test_whisper_fallback.py', tests)
         self.assertIn('testing_script/test_whisper_backend.py', tests)
         self.assertIn('testing_script/test_audio_transport_metadata.py', tests)
@@ -210,6 +215,7 @@ class CandidateSafetyTests(unittest.TestCase):
         text = Path(validate_image.__file__).read_text()
         self.assertIn("'--entrypoint=python'", text)
         self.assertIn('Model loading forbidden', text)
+        self.assertIn('filler_regression filler_hybrid', text)
         self.assertIn('Timestamp optimization inactive', text)
         self.assertIn('Long-form retention optimization inactive', text)
         self.assertIn('whisper_longform_retention', text)
@@ -222,9 +228,9 @@ class CandidateSafetyTests(unittest.TestCase):
             text,
         )
         self.assertIn('chunk._forward_hooks.values()', text)
-        self.assertIn('result.testsRun==163', text)
+        self.assertIn('result.testsRun==189', text)
         self.assertIn('backend_result.testsRun==4', text)
-        self.assertIn("'model_free_tests_each_mode':167", text)
+        self.assertIn("'model_free_tests_each_mode':193", text)
         self.assertIn("patch('transformers.WhisperForConditionalGeneration.from_pretrained'", text)
         self.assertIn("'fallback_hook':True", text)
         self.assertIn("len(json.loads(manifest.read_text())['files'])==12", text)

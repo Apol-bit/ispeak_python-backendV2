@@ -1,5 +1,5 @@
 {
-  "commit": "b210402897e08fb1f6d60dbc24134eca7a3b8aa0",
+  "commit": "ee7266e443f87d116bb5260a641724880202b0f5",
   "base": "ghcr.io/apol-bit/ispeak-python@sha256:a938fb342d2ef69ad0e6110b4031d41b7ddc9628311f2f50788922a2c034c05e",
   "model_manifest_sha256": "b12f97bc4fff844414b51ba73d027d3de740fe9b532adca159c70b6d15807e86",
   "files": [
@@ -39,14 +39,19 @@
       "sha256": "51f8acfe439e681f8c5dc969ca9b52befae81cc1ad610ba96706e527f5e7bbc7"
     },
     {
+      "path": "audio_analysis_processing_files/filler_context.py",
+      "bytes": 5199,
+      "sha256": "f3546f7e9adc3aee57cce1e9164d3ec8aa2ca556859b6dcce049193b80396181"
+    },
+    {
       "path": "audio_analysis_processing_files/filler_vocabulary.py",
-      "bytes": 1363,
-      "sha256": "5492ccc58f889323389a9134188d1903188ddec998334a85856b6eecb1e516ba"
+      "bytes": 3065,
+      "sha256": "c9968014df379ee8570d74ce93a931e3ecdd8b9772cd3831e5e4fae0e63c920e"
     },
     {
       "path": "audio_analysis_processing_files/filler_words.py",
-      "bytes": 12927,
-      "sha256": "3793362e63ef95b0ac13a3b207c5beb32ebb0d8e045d22a4c71959257fa55400"
+      "bytes": 13761,
+      "sha256": "f721adc37ac1fe720d9ef73866f770bdb8d124062e5e9ece5f39926e190239d8"
     },
     {
       "path": "audio_analysis_processing_files/speaking_rate.py",
@@ -146,9 +151,19 @@
       "sha256": "b136c9ca3e42dbb24d91ab5e290a9b01d514f238205a1476db096b6a5debed1c"
     },
     {
+      "path": "testing_script/evaluate_filler_hybrid.py",
+      "bytes": 13159,
+      "sha256": "eaaf3018d923f565482b7716170110897d1fd8ee435c1bbbf2b2bdb2d3eff845"
+    },
+    {
       "path": "testing_script/evaluate_v5_v6.py",
       "bytes": 11487,
       "sha256": "6f5e60298a96cd86396f8e1894939a2cfd6d18c0dfdf1d1c3f9fbc53ecacdae9"
+    },
+    {
+      "path": "testing_script/fixtures/filler_hybrid_labeled.json",
+      "bytes": 37522,
+      "sha256": "0437d7552ae9bb8dce61fcc52d434cdb383577ef0b8ef985493791807712d0d8"
     },
     {
       "path": "testing_script/test_admission.py",
@@ -191,9 +206,14 @@
       "sha256": "4889744bd28e12afcc4641354836b122be2a36f2db0f34ebf603793faececfc9"
     },
     {
+      "path": "testing_script/test_filler_hybrid.py",
+      "bytes": 12964,
+      "sha256": "38db7eb73f2978b7d45df01a6ff64be2cda5599cd94394ec9d8e95f36a390589"
+    },
+    {
       "path": "testing_script/test_filler_regression.py",
-      "bytes": 4627,
-      "sha256": "17ebb2fc75295933da4b3fbe5054039614c14c35aa41e5ff814c507d327dc7e8"
+      "bytes": 4638,
+      "sha256": "b8c2cb5022db1c82ef453f3afbfad49995d6ddbb0e2c4404c125ed21995763fe"
     },
     {
       "path": "testing_script/test_input_validation.py",
@@ -282,8 +302,8 @@
     },
     {
       "path": "testing_script/test_word_alignment.py",
-      "bytes": 7750,
-      "sha256": "e35594a2a6a5a9aa59e23d0b4b7c7eb9b6a6bdc7bd21352cf6b277b37aea9cb8"
+      "bytes": 8032,
+      "sha256": "e0c81a3b62d854fb445029c841356ca3c362747d4523c9d1bd826148a16fd830"
     }
   ]
 }
