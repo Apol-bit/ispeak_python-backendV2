@@ -1,5 +1,5 @@
 {
-  "commit": "fede74a0bd40c0d4845aa5f47584ad513497eede",
+  "commit": "7a5639f0b8c0f2f45d1e2b5034b03b88b0292ac9",
   "base": "ghcr.io/apol-bit/ispeak-python@sha256:a938fb342d2ef69ad0e6110b4031d41b7ddc9628311f2f50788922a2c034c05e",
   "model_manifest_sha256": "b12f97bc4fff844414b51ba73d027d3de740fe9b532adca159c70b6d15807e86",
   "files": [
@@ -70,8 +70,8 @@
     },
     {
       "path": "audio_analysis_processing_files/whisper_fallback.py",
-      "bytes": 5151,
-      "sha256": "2833303b33dc9a5e68b41ecd999e510a14c59b14ce50ffd3a9f91e55a5673528"
+      "bytes": 5831,
+      "sha256": "fc6107578e69ec6d1b746d6746b908592aad8e5f0370020fdb9f0cb300ccc260"
     },
     {
       "path": "audio_analysis_processing_files/whisper_retention.py",
@@ -120,13 +120,13 @@
     },
     {
       "path": "model.py",
-      "bytes": 16745,
-      "sha256": "8a4f7d2435f1505143f5ea2445165e9b97474411a8bff410706b2e26a2098f78"
+      "bytes": 17516,
+      "sha256": "820edfdf2f3555d4167640ff9cfd87aaa6f6427aac0683381e2fe21d4b8d4f50"
     },
     {
       "path": "whisper_service.py",
-      "bytes": 25223,
-      "sha256": "c4318e71d713e846aa1de0fcc4b602f105016907b0af28740c442d14524f55fd"
+      "bytes": 26097,
+      "sha256": "2cf8929b42dd30273581e831dc769bcfc8934d63291fde8df756cf27b2da88bb"
     }
   ],
   "tests": [
@@ -247,8 +247,8 @@
     },
     {
       "path": "testing_script/test_whisper_fallback.py",
-      "bytes": 10057,
-      "sha256": "ce90c23c8c84dafe4dc198effc56f432c3c716562534e9f06cad57caff9055a9"
+      "bytes": 16478,
+      "sha256": "df0b264e1c7cea19ea295e3e25d922c290fa766df30d5d1e4381cfe595f68685"
     },
     {
       "path": "testing_script/test_whisper_longform_retention.py",
@@ -269,6 +269,11 @@
       "path": "testing_script/test_audio_transport_metadata.py",
       "bytes": 2953,
       "sha256": "29ec5609ee66af2116dbd26131a92810a5dd331b9adc4901507a8c5a0c502650"
+    },
+    {
+      "path": "testing_script/test_whisper_backend.py",
+      "bytes": 4564,
+      "sha256": "e87944f984941655528252a3951e2e15ad49a6bd9d98c0f02e67ae99ee0a54da"
     }
   ]
 }

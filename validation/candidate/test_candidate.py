@@ -113,7 +113,7 @@ class CandidateSafetyTests(unittest.TestCase):
         publication = next(n.lineno for n in calls if n.func.id == 'publish_if_approved')
         self.assertLess(validation, publication)
         self.assertEqual(candidate.RECIPE, 'docker/Dockerfile.v6-security-overlay')
-        self.assertEqual(candidate.SOURCE, 'fede74a0bd40c0d4845aa5f47584ad513497eede')
+        self.assertEqual(candidate.SOURCE, '7a5639f0b8c0f2f45d1e2b5034b03b88b0292ac9')
 
     def test_no_push_trigger_and_existing_environment(self):
         root = Path(__file__).resolve().parents[2]
@@ -203,6 +203,7 @@ class CandidateSafetyTests(unittest.TestCase):
         self.assertTrue(all(len(v['sha256']) == 64 for v in manifest['files'] + manifest['tests']))
         tests = {v['path'] for v in manifest['tests']}
         self.assertIn('testing_script/test_whisper_fallback.py', tests)
+        self.assertIn('testing_script/test_whisper_backend.py', tests)
         self.assertIn('testing_script/test_audio_transport_metadata.py', tests)
 
     def test_model_free_checks_override_entrypoint_and_guard_models(self):
@@ -221,7 +222,10 @@ class CandidateSafetyTests(unittest.TestCase):
             text,
         )
         self.assertIn('chunk._forward_hooks.values()', text)
-        self.assertIn('result.testsRun==150', text)
+        self.assertIn('result.testsRun==154', text)
+        self.assertIn('backend_result.testsRun==4', text)
+        self.assertIn("'model_free_tests_each_mode':158", text)
+        self.assertIn("patch('transformers.WhisperForConditionalGeneration.from_pretrained'", text)
         self.assertIn("'fallback_hook':True", text)
         self.assertIn("len(json.loads(manifest.read_text())['files'])==12", text)
 
