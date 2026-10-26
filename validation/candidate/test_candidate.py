@@ -113,7 +113,7 @@ class CandidateSafetyTests(unittest.TestCase):
         publication = next(n.lineno for n in calls if n.func.id == 'publish_if_approved')
         self.assertLess(validation, publication)
         self.assertEqual(candidate.RECIPE, 'docker/Dockerfile.v6-security-overlay')
-        self.assertEqual(candidate.SOURCE, 'ee7266e443f87d116bb5260a641724880202b0f5')
+        self.assertEqual(candidate.SOURCE, '652960724bce9b20b83c63abecef4ffd594093cf')
 
     def test_no_push_trigger_and_existing_environment(self):
         root = Path(__file__).resolve().parents[2]
@@ -228,9 +228,9 @@ class CandidateSafetyTests(unittest.TestCase):
             text,
         )
         self.assertIn('chunk._forward_hooks.values()', text)
-        self.assertIn('result.testsRun==189', text)
+        self.assertIn('result.testsRun==196', text)
         self.assertIn('backend_result.testsRun==4', text)
-        self.assertIn("'model_free_tests_each_mode':193", text)
+        self.assertIn("'model_free_tests_each_mode':200", text)
         self.assertIn("patch('transformers.WhisperForConditionalGeneration.from_pretrained'", text)
         self.assertIn("'fallback_hook':True", text)
         self.assertIn("len(json.loads(manifest.read_text())['files'])==12", text)
