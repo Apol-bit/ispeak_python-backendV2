@@ -1,14 +1,15 @@
 """Offline contextual filler-word classification.
 
-This module deliberately contains no filler-word dictionary and never calls an
-API. It expects a local Hugging Face token-classification model trained with
+Vocabulary recognition supplies review candidates only and never calls an
+API. Confirmed counts require a local token-classification model with
 ``FILLER`` and ``CONTEXT_WORD`` labels (``UNCERTAIN`` is optional).
 """
 
 from __future__ import annotations
 
 import os
-from audio_analysis_processing_files.word_alignment import reconstruct_words, word_tokens
+from audio_analysis_processing_files.word_alignment import WORD, reconstruct_words, word_tokens
+from audio_analysis_processing_files.filler_vocabulary import VOCABULARY
 import threading
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Protocol
@@ -162,6 +163,13 @@ def _classification_item(
     words = _words_overlapping(aligned_words, char_start, char_end)
     if not words:
         return None
+    if transcript is not None:
+        # Token models can label only "um" inside "pumunta". Such a subword
+        # must never be expanded into a confirmed whole-word filler.
+        lexical = [m for m in WORD.finditer(transcript)
+                   if m.start() < char_end and m.end() > char_start]
+        if not lexical or lexical[0].start() < char_start or lexical[-1].end() > char_end:
+            return None
     return {
         "word": transcript[words[0]['char_start']:words[-1]['char_end']] if transcript is not None else " ".join(word["word"] for word in words),
         "start": round(min(word["start"] for word in words), 3),
@@ -195,7 +203,7 @@ def _analyze_fillers(
 ) -> Dict[str, Any]:
     """Classify words from their full context using a local model.
 
-    No hard-coded word list or contextual rule is used. Predictions below the
+    Vocabulary alone never increases the count. Predictions below the
     confidence threshold are returned as uncertain candidates and do not lower
     the filler score.
     """
@@ -248,6 +256,26 @@ def _analyze_fillers(
             item["reason"] = "local model prediction is uncertain"
             uncertain.append(item)
 
+    # Surface vocabulary the classifier missed (including Filipino/Taglish),
+    # without converting recognition into classification or inventing confidence.
+    occupied = [(int(p.get('start', 0)), int(p.get('end', 0))) for p in predictions
+                if _normalize_label(p.get('entity_group', p.get('entity', p.get('label'))))
+                in {'FILLER', 'UNCERTAIN'}
+                and _classification_item(p, aligned_words, transcript) is not None]
+    for match in VOCABULARY.finditer(transcript):
+        if any(start < match.end() and end > match.start() for start, end in occupied):
+            continue
+        words = _words_overlapping(aligned_words, match.start(), match.end())
+        if not words:
+            continue
+        uncertain.append({
+            'word': match.group(),
+            'start': round(min(word['start'] for word in words), 3),
+            'end': round(max(word['end'] for word in words), 3),
+            'confidence': None,
+            'reason': 'transcript vocabulary match only; contextual filler use is unconfirmed',
+        })
+
     fillers.sort(key=lambda item: item["start"])
     uncertain.sort(key=lambda item: item["start"])
     filler_count = len(fillers)
@@ -262,7 +290,8 @@ def _analyze_fillers(
         "filler_candidates": uncertain,
         "filler_score": filler_score,
         "total_words": total_words,
-        "message": "No filler words detected" if filler_count == 0 else (
+        "message": ("No confirmed filler spans; possible fillers need review" if uncertain
+                    else "No filler words detected") if filler_count == 0 else (
             "Minimal filler-word usage" if filler_rate < 5 else
             "Moderate filler-word usage" if filler_rate < 15 else
             "High filler-word usage"

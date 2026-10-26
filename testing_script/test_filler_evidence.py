@@ -23,7 +23,8 @@ class FillerEvidenceTests(unittest.TestCase):
             self.assertEqual(r['coverage']['status'], 'matched')
             r = self.analyze(text, [{**positive, 'score': .59}])
             self.assertEqual(r['filler_count'], 0)
-            self.assertEqual(r['candidate_count'], 1)
+            self.assertGreaterEqual(r['candidate_count'], 1)
+            self.assertEqual(r['filler_candidates'][0]['confidence'], .59)
             self.assertEqual(r['filler_score'], 100)
         for word in ['like', 'ano']:
             r = self.analyze(word, [dict(entity_group='CONTEXT_WORD', start=0, end=len(word), score=.99)])

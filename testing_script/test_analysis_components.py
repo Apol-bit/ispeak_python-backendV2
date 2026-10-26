@@ -156,7 +156,8 @@ class AnalysisComponentTests(unittest.TestCase):
         self.assertTrue(result["analysis_available"])
         self.assertEqual(result["filler_count"], 1)
         self.assertEqual(result["filler_words"][0]["word"], "um")
-        self.assertEqual(result["filler_candidates"], [])
+        self.assertEqual([c['word'] for c in result['filler_candidates']], ['Actually'])
+        self.assertIsNone(result['filler_candidates'][0]['confidence'])
 
 
 if __name__ == "__main__":
