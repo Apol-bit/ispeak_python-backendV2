@@ -7,7 +7,7 @@ from audio_analysis_processing_files.filler_vocabulary import VOCABULARY
 
 def analyze(text, predictions=()):
     return analyze_fillers(
-        [dict(text=w, start=i, end=i + .5) for i, w in enumerate(text.split())],
+        [dict(text=w, start=i * .2, end=i * .2 + .15) for i, w in enumerate(text.split())],
         classifier=lambda _: list(predictions), full_transcript=text,
     )
 

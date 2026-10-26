@@ -88,7 +88,11 @@ class WordAlignmentTests(unittest.TestCase):
             def predictions(value):
                 # Two fixed single-word detections, independent of model accuracy.
                 return [dict(entity_group='FILLER', start=match, end=match+2, score=.99) for match in [value.index('um'), value.index('uh')]]
-            result = analyze_fillers(segments(raw), classifier=predictions, full_transcript=text)
+            # Score arithmetic replay uses fluent synthetic timing; pause-gated
+            # complementary detection is exercised in test_filler_hybrid.
+            fluent = [dict(text=w['text'], start=i * .2, end=i * .2 + .15)
+                      for i, w in enumerate(segments(raw))]
+            result = analyze_fillers(fluent, classifier=predictions, full_transcript=text)
             self.assertEqual(result['total_words'], count)
             self.assertEqual(result['filler_score'], expected_filler)
             pacing = analyze_speaking_rate(segments(raw), duration, full_transcript=text)

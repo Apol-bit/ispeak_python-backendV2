@@ -1,0 +1,1911 @@
+{
+  "schema_version": 1,
+  "provenance": "Constructed text contrasts with author-assigned intended-use labels and synthetic timing; not independent human-annotated audio or production sessions",
+  "timing_controls": "0.45-second gaps flank all annotated probes, INCLUDING grammatical and ambiguous controls; other gaps 0.06 seconds",
+  "heldout_caveat": "Frozen examples use different expressions/contexts; small same-author contrast set, not independent population validation",
+  "cases": [
+    {
+      "id": "E01",
+      "language": "English",
+      "split": "development",
+      "transcript": "Um, I need a moment.",
+      "annotations": [
+        {
+          "start": 0,
+          "end": 2,
+          "label": "filler",
+          "term": "Um"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "Um,",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "I",
+          "start": 0.65,
+          "end": 0.85
+        },
+        {
+          "text": "need",
+          "start": 0.91,
+          "end": 1.11
+        },
+        {
+          "text": "a",
+          "start": 1.17,
+          "end": 1.37
+        },
+        {
+          "text": "moment.",
+          "start": 1.43,
+          "end": 1.63
+        }
+      ]
+    },
+    {
+      "id": "E02",
+      "language": "English",
+      "split": "development",
+      "transcript": "I was, like, I was trying to explain.",
+      "annotations": [
+        {
+          "start": 7,
+          "end": 11,
+          "label": "filler",
+          "term": "like"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "I",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "was,",
+          "start": 0.26,
+          "end": 0.46
+        },
+        {
+          "text": "like,",
+          "start": 0.91,
+          "end": 1.11
+        },
+        {
+          "text": "I",
+          "start": 1.56,
+          "end": 1.76
+        },
+        {
+          "text": "was",
+          "start": 1.82,
+          "end": 2.02
+        },
+        {
+          "text": "trying",
+          "start": 2.08,
+          "end": 2.28
+        },
+        {
+          "text": "to",
+          "start": 2.34,
+          "end": 2.54
+        },
+        {
+          "text": "explain.",
+          "start": 2.6,
+          "end": 2.8
+        }
+      ]
+    },
+    {
+      "id": "E03",
+      "language": "English",
+      "split": "development",
+      "transcript": "We should, you know, we should practice today.",
+      "annotations": [
+        {
+          "start": 11,
+          "end": 19,
+          "label": "filler",
+          "term": "you know"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "We",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "should,",
+          "start": 0.26,
+          "end": 0.46
+        },
+        {
+          "text": "you",
+          "start": 0.91,
+          "end": 1.11
+        },
+        {
+          "text": "know,",
+          "start": 1.17,
+          "end": 1.37
+        },
+        {
+          "text": "we",
+          "start": 1.82,
+          "end": 2.02
+        },
+        {
+          "text": "should",
+          "start": 2.08,
+          "end": 2.28
+        },
+        {
+          "text": "practice",
+          "start": 2.34,
+          "end": 2.54
+        },
+        {
+          "text": "today.",
+          "start": 2.6,
+          "end": 2.8
+        }
+      ]
+    },
+    {
+      "id": "E04",
+      "language": "English",
+      "split": "development",
+      "transcript": "I like apples so I bought some.",
+      "annotations": [
+        {
+          "start": 2,
+          "end": 6,
+          "label": "grammatical",
+          "term": "like"
+        },
+        {
+          "start": 14,
+          "end": 16,
+          "label": "grammatical",
+          "term": "so"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "I",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "like",
+          "start": 0.65,
+          "end": 0.85
+        },
+        {
+          "text": "apples",
+          "start": 1.3,
+          "end": 1.5
+        },
+        {
+          "text": "so",
+          "start": 1.95,
+          "end": 2.15
+        },
+        {
+          "text": "I",
+          "start": 2.6,
+          "end": 2.8
+        },
+        {
+          "text": "bought",
+          "start": 2.86,
+          "end": 3.06
+        },
+        {
+          "text": "some.",
+          "start": 3.12,
+          "end": 3.32
+        }
+      ]
+    },
+    {
+      "id": "E05",
+      "language": "English",
+      "split": "development",
+      "transcript": "It looks, like, it looks in the photo.",
+      "annotations": [
+        {
+          "start": 10,
+          "end": 14,
+          "label": "grammatical",
+          "term": "like"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "It",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "looks,",
+          "start": 0.26,
+          "end": 0.46
+        },
+        {
+          "text": "like,",
+          "start": 0.91,
+          "end": 1.11
+        },
+        {
+          "text": "it",
+          "start": 1.56,
+          "end": 1.76
+        },
+        {
+          "text": "looks",
+          "start": 1.82,
+          "end": 2.02
+        },
+        {
+          "text": "in",
+          "start": 2.08,
+          "end": 2.28
+        },
+        {
+          "text": "the",
+          "start": 2.34,
+          "end": 2.54
+        },
+        {
+          "text": "photo.",
+          "start": 2.6,
+          "end": 2.8
+        }
+      ]
+    },
+    {
+      "id": "E06",
+      "language": "English",
+      "split": "development",
+      "transcript": "We might, well, continue tomorrow.",
+      "annotations": [
+        {
+          "start": 10,
+          "end": 14,
+          "label": "ambiguous",
+          "term": "well"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "We",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "might,",
+          "start": 0.26,
+          "end": 0.46
+        },
+        {
+          "text": "well,",
+          "start": 0.91,
+          "end": 1.11
+        },
+        {
+          "text": "continue",
+          "start": 1.56,
+          "end": 1.76
+        },
+        {
+          "text": "tomorrow.",
+          "start": 1.82,
+          "end": 2.02
+        }
+      ]
+    },
+    {
+      "id": "E07",
+      "language": "English",
+      "split": "heldout",
+      "transcript": "The plan, ah, the plan is ready.",
+      "annotations": [
+        {
+          "start": 10,
+          "end": 12,
+          "label": "filler",
+          "term": "ah"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "The",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "plan,",
+          "start": 0.26,
+          "end": 0.46
+        },
+        {
+          "text": "ah,",
+          "start": 0.91,
+          "end": 1.11
+        },
+        {
+          "text": "the",
+          "start": 1.56,
+          "end": 1.76
+        },
+        {
+          "text": "plan",
+          "start": 1.82,
+          "end": 2.02
+        },
+        {
+          "text": "is",
+          "start": 2.08,
+          "end": 2.28
+        },
+        {
+          "text": "ready.",
+          "start": 2.34,
+          "end": 2.54
+        }
+      ]
+    },
+    {
+      "id": "E08",
+      "language": "English",
+      "split": "heldout",
+      "transcript": "We can, so, we can start now.",
+      "annotations": [
+        {
+          "start": 8,
+          "end": 10,
+          "label": "filler",
+          "term": "so"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "We",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "can,",
+          "start": 0.26,
+          "end": 0.46
+        },
+        {
+          "text": "so,",
+          "start": 0.91,
+          "end": 1.11
+        },
+        {
+          "text": "we",
+          "start": 1.56,
+          "end": 1.76
+        },
+        {
+          "text": "can",
+          "start": 1.82,
+          "end": 2.02
+        },
+        {
+          "text": "start",
+          "start": 2.08,
+          "end": 2.28
+        },
+        {
+          "text": "now.",
+          "start": 2.34,
+          "end": 2.54
+        }
+      ]
+    },
+    {
+      "id": "E09",
+      "language": "English",
+      "split": "heldout",
+      "transcript": "The term 'uh' is written on the slide.",
+      "annotations": [
+        {
+          "start": 9,
+          "end": 13,
+          "label": "grammatical",
+          "term": "'uh'"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "The",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "term",
+          "start": 0.26,
+          "end": 0.46
+        },
+        {
+          "text": "'uh'",
+          "start": 0.91,
+          "end": 1.11
+        },
+        {
+          "text": "is",
+          "start": 1.56,
+          "end": 1.76
+        },
+        {
+          "text": "written",
+          "start": 1.82,
+          "end": 2.02
+        },
+        {
+          "text": "on",
+          "start": 2.08,
+          "end": 2.28
+        },
+        {
+          "text": "the",
+          "start": 2.34,
+          "end": 2.54
+        },
+        {
+          "text": "slide.",
+          "start": 2.6,
+          "end": 2.8
+        }
+      ]
+    },
+    {
+      "id": "E10",
+      "language": "English",
+      "split": "heldout",
+      "transcript": "Actually, this is correct.",
+      "annotations": [
+        {
+          "start": 0,
+          "end": 8,
+          "label": "grammatical",
+          "term": "Actually"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "Actually,",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "this",
+          "start": 0.65,
+          "end": 0.85
+        },
+        {
+          "text": "is",
+          "start": 0.91,
+          "end": 1.11
+        },
+        {
+          "text": "correct.",
+          "start": 1.17,
+          "end": 1.37
+        }
+      ]
+    },
+    {
+      "id": "E11",
+      "language": "English",
+      "split": "heldout",
+      "transcript": "Do you know the answer?",
+      "annotations": [
+        {
+          "start": 0,
+          "end": 11,
+          "label": "grammatical",
+          "term": "Do you know"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "Do",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "you",
+          "start": 0.26,
+          "end": 0.46
+        },
+        {
+          "text": "know",
+          "start": 0.52,
+          "end": 0.72
+        },
+        {
+          "text": "the",
+          "start": 1.17,
+          "end": 1.37
+        },
+        {
+          "text": "answer?",
+          "start": 1.43,
+          "end": 1.63
+        }
+      ]
+    },
+    {
+      "id": "E12",
+      "language": "English",
+      "split": "heldout",
+      "transcript": "I wanted to, um, explain.",
+      "annotations": [
+        {
+          "start": 13,
+          "end": 15,
+          "label": "filler",
+          "term": "um"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "I",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "wanted",
+          "start": 0.26,
+          "end": 0.46
+        },
+        {
+          "text": "to,",
+          "start": 0.52,
+          "end": 0.72
+        },
+        {
+          "text": "um,",
+          "start": 1.17,
+          "end": 1.37
+        },
+        {
+          "text": "explain.",
+          "start": 1.82,
+          "end": 2.02
+        }
+      ]
+    },
+    {
+      "id": "E13",
+      "language": "English",
+      "split": "heldout",
+      "transcript": "This is kind of difficult.",
+      "annotations": [
+        {
+          "start": 8,
+          "end": 15,
+          "label": "ambiguous",
+          "term": "kind of"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "This",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "is",
+          "start": 0.26,
+          "end": 0.46
+        },
+        {
+          "text": "kind",
+          "start": 0.91,
+          "end": 1.11
+        },
+        {
+          "text": "of",
+          "start": 1.17,
+          "end": 1.37
+        },
+        {
+          "text": "difficult.",
+          "start": 1.82,
+          "end": 2.02
+        }
+      ]
+    },
+    {
+      "id": "F01",
+      "language": "Filipino",
+      "split": "development",
+      "transcript": "Ang plano, ano, ang plano natin ay magsanay.",
+      "annotations": [
+        {
+          "start": 11,
+          "end": 14,
+          "label": "filler",
+          "term": "ano"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "Ang",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "plano,",
+          "start": 0.26,
+          "end": 0.46
+        },
+        {
+          "text": "ano,",
+          "start": 0.91,
+          "end": 1.11
+        },
+        {
+          "text": "ang",
+          "start": 1.56,
+          "end": 1.76
+        },
+        {
+          "text": "plano",
+          "start": 1.82,
+          "end": 2.02
+        },
+        {
+          "text": "natin",
+          "start": 2.08,
+          "end": 2.28
+        },
+        {
+          "text": "ay",
+          "start": 2.34,
+          "end": 2.54
+        },
+        {
+          "text": "magsanay.",
+          "start": 2.6,
+          "end": 2.8
+        }
+      ]
+    },
+    {
+      "id": "F02",
+      "language": "Filipino",
+      "split": "development",
+      "transcript": "Gusto ko, parang, gusto ko munang mag-isip.",
+      "annotations": [
+        {
+          "start": 10,
+          "end": 16,
+          "label": "filler",
+          "term": "parang"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "Gusto",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "ko,",
+          "start": 0.26,
+          "end": 0.46
+        },
+        {
+          "text": "parang,",
+          "start": 0.91,
+          "end": 1.11
+        },
+        {
+          "text": "gusto",
+          "start": 1.56,
+          "end": 1.76
+        },
+        {
+          "text": "ko",
+          "start": 1.82,
+          "end": 2.02
+        },
+        {
+          "text": "munang",
+          "start": 2.08,
+          "end": 2.28
+        },
+        {
+          "text": "mag-isip.",
+          "start": 2.34,
+          "end": 2.54
+        }
+      ]
+    },
+    {
+      "id": "F03",
+      "language": "Filipino",
+      "split": "development",
+      "transcript": "Um, kailangan kong mag-isip.",
+      "annotations": [
+        {
+          "start": 0,
+          "end": 2,
+          "label": "filler",
+          "term": "Um"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "Um,",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "kailangan",
+          "start": 0.65,
+          "end": 0.85
+        },
+        {
+          "text": "kong",
+          "start": 0.91,
+          "end": 1.11
+        },
+        {
+          "text": "mag-isip.",
+          "start": 1.17,
+          "end": 1.37
+        }
+      ]
+    },
+    {
+      "id": "F04",
+      "language": "Filipino",
+      "split": "development",
+      "transcript": "Ano ang pangalan mo?",
+      "annotations": [
+        {
+          "start": 0,
+          "end": 3,
+          "label": "grammatical",
+          "term": "Ano"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "Ano",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "ang",
+          "start": 0.65,
+          "end": 0.85
+        },
+        {
+          "text": "pangalan",
+          "start": 0.91,
+          "end": 1.11
+        },
+        {
+          "text": "mo?",
+          "start": 1.17,
+          "end": 1.37
+        }
+      ]
+    },
+    {
+      "id": "F05",
+      "language": "Filipino",
+      "split": "development",
+      "transcript": "Parang bahay ang gusali.",
+      "annotations": [
+        {
+          "start": 0,
+          "end": 6,
+          "label": "grammatical",
+          "term": "Parang"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "Parang",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "bahay",
+          "start": 0.65,
+          "end": 0.85
+        },
+        {
+          "text": "ang",
+          "start": 0.91,
+          "end": 1.11
+        },
+        {
+          "text": "gusali.",
+          "start": 1.17,
+          "end": 1.37
+        }
+      ]
+    },
+    {
+      "id": "F06",
+      "language": "Filipino",
+      "split": "development",
+      "transcript": "Sasabihin ko, ano, bukas.",
+      "annotations": [
+        {
+          "start": 14,
+          "end": 17,
+          "label": "ambiguous",
+          "term": "ano"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "Sasabihin",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "ko,",
+          "start": 0.26,
+          "end": 0.46
+        },
+        {
+          "text": "ano,",
+          "start": 0.91,
+          "end": 1.11
+        },
+        {
+          "text": "bukas.",
+          "start": 1.56,
+          "end": 1.76
+        }
+      ]
+    },
+    {
+      "id": "F07",
+      "language": "Filipino",
+      "split": "heldout",
+      "transcript": "Kailangan natin, ah, kailangan natin ng oras.",
+      "annotations": [
+        {
+          "start": 17,
+          "end": 19,
+          "label": "filler",
+          "term": "ah"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "Kailangan",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "natin,",
+          "start": 0.26,
+          "end": 0.46
+        },
+        {
+          "text": "ah,",
+          "start": 0.91,
+          "end": 1.11
+        },
+        {
+          "text": "kailangan",
+          "start": 1.56,
+          "end": 1.76
+        },
+        {
+          "text": "natin",
+          "start": 1.82,
+          "end": 2.02
+        },
+        {
+          "text": "ng",
+          "start": 2.08,
+          "end": 2.28
+        },
+        {
+          "text": "oras.",
+          "start": 2.34,
+          "end": 2.54
+        }
+      ]
+    },
+    {
+      "id": "F08",
+      "language": "Filipino",
+      "split": "heldout",
+      "transcript": "Ang sagot, alam mo, ang sagot ay bukas.",
+      "annotations": [
+        {
+          "start": 11,
+          "end": 18,
+          "label": "filler",
+          "term": "alam mo"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "Ang",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "sagot,",
+          "start": 0.26,
+          "end": 0.46
+        },
+        {
+          "text": "alam",
+          "start": 0.91,
+          "end": 1.11
+        },
+        {
+          "text": "mo,",
+          "start": 1.17,
+          "end": 1.37
+        },
+        {
+          "text": "ang",
+          "start": 1.82,
+          "end": 2.02
+        },
+        {
+          "text": "sagot",
+          "start": 2.08,
+          "end": 2.28
+        },
+        {
+          "text": "ay",
+          "start": 2.34,
+          "end": 2.54
+        },
+        {
+          "text": "bukas.",
+          "start": 2.6,
+          "end": 2.8
+        }
+      ]
+    },
+    {
+      "id": "F09",
+      "language": "Filipino",
+      "split": "heldout",
+      "transcript": "Ang tanong, ano, ang tanong mo?",
+      "annotations": [
+        {
+          "start": 12,
+          "end": 15,
+          "label": "grammatical",
+          "term": "ano"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "Ang",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "tanong,",
+          "start": 0.26,
+          "end": 0.46
+        },
+        {
+          "text": "ano,",
+          "start": 0.91,
+          "end": 1.11
+        },
+        {
+          "text": "ang",
+          "start": 1.56,
+          "end": 1.76
+        },
+        {
+          "text": "tanong",
+          "start": 1.82,
+          "end": 2.02
+        },
+        {
+          "text": "mo?",
+          "start": 2.08,
+          "end": 2.28
+        }
+      ]
+    },
+    {
+      "id": "F10",
+      "language": "Filipino",
+      "split": "heldout",
+      "transcript": "Salitang 'um' ang nasa pahina.",
+      "annotations": [
+        {
+          "start": 9,
+          "end": 13,
+          "label": "grammatical",
+          "term": "'um'"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "Salitang",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "'um'",
+          "start": 0.65,
+          "end": 0.85
+        },
+        {
+          "text": "ang",
+          "start": 1.3,
+          "end": 1.5
+        },
+        {
+          "text": "nasa",
+          "start": 1.56,
+          "end": 1.76
+        },
+        {
+          "text": "pahina.",
+          "start": 1.82,
+          "end": 2.02
+        }
+      ]
+    },
+    {
+      "id": "F11",
+      "language": "Filipino",
+      "split": "heldout",
+      "transcript": "Tapos na ang trabaho kasi maaga tayo.",
+      "annotations": [
+        {
+          "start": 21,
+          "end": 25,
+          "label": "grammatical",
+          "term": "kasi"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "Tapos",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "na",
+          "start": 0.26,
+          "end": 0.46
+        },
+        {
+          "text": "ang",
+          "start": 0.52,
+          "end": 0.72
+        },
+        {
+          "text": "trabaho",
+          "start": 0.78,
+          "end": 0.98
+        },
+        {
+          "text": "kasi",
+          "start": 1.43,
+          "end": 1.63
+        },
+        {
+          "text": "maaga",
+          "start": 2.08,
+          "end": 2.28
+        },
+        {
+          "text": "tayo.",
+          "start": 2.34,
+          "end": 2.54
+        }
+      ]
+    },
+    {
+      "id": "F12",
+      "language": "Filipino",
+      "split": "heldout",
+      "transcript": "Gusto kong, ano, tumulong.",
+      "annotations": [
+        {
+          "start": 12,
+          "end": 15,
+          "label": "filler",
+          "term": "ano"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "Gusto",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "kong,",
+          "start": 0.26,
+          "end": 0.46
+        },
+        {
+          "text": "ano,",
+          "start": 0.91,
+          "end": 1.11
+        },
+        {
+          "text": "tumulong.",
+          "start": 1.56,
+          "end": 1.76
+        }
+      ]
+    },
+    {
+      "id": "F13",
+      "language": "Filipino",
+      "split": "heldout",
+      "transcript": "Ito ay kumbaga isang halimbawa.",
+      "annotations": [
+        {
+          "start": 7,
+          "end": 14,
+          "label": "ambiguous",
+          "term": "kumbaga"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "Ito",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "ay",
+          "start": 0.26,
+          "end": 0.46
+        },
+        {
+          "text": "kumbaga",
+          "start": 0.91,
+          "end": 1.11
+        },
+        {
+          "text": "isang",
+          "start": 1.56,
+          "end": 1.76
+        },
+        {
+          "text": "halimbawa.",
+          "start": 1.82,
+          "end": 2.02
+        }
+      ]
+    },
+    {
+      "id": "T01",
+      "language": "Taglish",
+      "split": "development",
+      "transcript": "I think, ano, I think kailangan natin ng practice.",
+      "annotations": [
+        {
+          "start": 9,
+          "end": 12,
+          "label": "filler",
+          "term": "ano"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "I",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "think,",
+          "start": 0.26,
+          "end": 0.46
+        },
+        {
+          "text": "ano,",
+          "start": 0.91,
+          "end": 1.11
+        },
+        {
+          "text": "I",
+          "start": 1.56,
+          "end": 1.76
+        },
+        {
+          "text": "think",
+          "start": 1.82,
+          "end": 2.02
+        },
+        {
+          "text": "kailangan",
+          "start": 2.08,
+          "end": 2.28
+        },
+        {
+          "text": "natin",
+          "start": 2.34,
+          "end": 2.54
+        },
+        {
+          "text": "ng",
+          "start": 2.6,
+          "end": 2.8
+        },
+        {
+          "text": "practice.",
+          "start": 2.86,
+          "end": 3.06
+        }
+      ]
+    },
+    {
+      "id": "T02",
+      "language": "Taglish",
+      "split": "development",
+      "transcript": "Gusto ko, as in, gusto ko munang mag-practice.",
+      "annotations": [
+        {
+          "start": 10,
+          "end": 15,
+          "label": "filler",
+          "term": "as in"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "Gusto",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "ko,",
+          "start": 0.26,
+          "end": 0.46
+        },
+        {
+          "text": "as",
+          "start": 0.91,
+          "end": 1.11
+        },
+        {
+          "text": "in,",
+          "start": 1.17,
+          "end": 1.37
+        },
+        {
+          "text": "gusto",
+          "start": 1.82,
+          "end": 2.02
+        },
+        {
+          "text": "ko",
+          "start": 2.08,
+          "end": 2.28
+        },
+        {
+          "text": "munang",
+          "start": 2.34,
+          "end": 2.54
+        },
+        {
+          "text": "mag-practice.",
+          "start": 2.6,
+          "end": 2.8
+        }
+      ]
+    },
+    {
+      "id": "T03",
+      "language": "Taglish",
+      "split": "development",
+      "transcript": "Uh, kailangan ko ng moment, um, bago mag-start.",
+      "annotations": [
+        {
+          "start": 0,
+          "end": 2,
+          "label": "filler",
+          "term": "Uh"
+        },
+        {
+          "start": 28,
+          "end": 30,
+          "label": "filler",
+          "term": "um"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "Uh,",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "kailangan",
+          "start": 0.65,
+          "end": 0.85
+        },
+        {
+          "text": "ko",
+          "start": 0.91,
+          "end": 1.11
+        },
+        {
+          "text": "ng",
+          "start": 1.17,
+          "end": 1.37
+        },
+        {
+          "text": "moment,",
+          "start": 1.43,
+          "end": 1.63
+        },
+        {
+          "text": "um,",
+          "start": 2.08,
+          "end": 2.28
+        },
+        {
+          "text": "bago",
+          "start": 2.73,
+          "end": 2.93
+        },
+        {
+          "text": "mag-start.",
+          "start": 2.99,
+          "end": 3.19
+        }
+      ]
+    },
+    {
+      "id": "T04",
+      "language": "Taglish",
+      "split": "development",
+      "transcript": "I like this kasi parang bahay.",
+      "annotations": [
+        {
+          "start": 2,
+          "end": 6,
+          "label": "grammatical",
+          "term": "like"
+        },
+        {
+          "start": 17,
+          "end": 23,
+          "label": "grammatical",
+          "term": "parang"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "I",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "like",
+          "start": 0.65,
+          "end": 0.85
+        },
+        {
+          "text": "this",
+          "start": 1.3,
+          "end": 1.5
+        },
+        {
+          "text": "kasi",
+          "start": 1.56,
+          "end": 1.76
+        },
+        {
+          "text": "parang",
+          "start": 2.21,
+          "end": 2.41
+        },
+        {
+          "text": "bahay.",
+          "start": 2.86,
+          "end": 3.06
+        }
+      ]
+    },
+    {
+      "id": "T05",
+      "language": "Taglish",
+      "split": "development",
+      "transcript": "It sounds, like, it sounds sa recording.",
+      "annotations": [
+        {
+          "start": 11,
+          "end": 15,
+          "label": "grammatical",
+          "term": "like"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "It",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "sounds,",
+          "start": 0.26,
+          "end": 0.46
+        },
+        {
+          "text": "like,",
+          "start": 0.91,
+          "end": 1.11
+        },
+        {
+          "text": "it",
+          "start": 1.56,
+          "end": 1.76
+        },
+        {
+          "text": "sounds",
+          "start": 1.82,
+          "end": 2.02
+        },
+        {
+          "text": "sa",
+          "start": 2.08,
+          "end": 2.28
+        },
+        {
+          "text": "recording.",
+          "start": 2.34,
+          "end": 2.54
+        }
+      ]
+    },
+    {
+      "id": "T06",
+      "language": "Taglish",
+      "split": "development",
+      "transcript": "This is, as in, really hard.",
+      "annotations": [
+        {
+          "start": 9,
+          "end": 14,
+          "label": "ambiguous",
+          "term": "as in"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "This",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "is,",
+          "start": 0.26,
+          "end": 0.46
+        },
+        {
+          "text": "as",
+          "start": 0.91,
+          "end": 1.11
+        },
+        {
+          "text": "in,",
+          "start": 1.17,
+          "end": 1.37
+        },
+        {
+          "text": "really",
+          "start": 1.82,
+          "end": 2.02
+        },
+        {
+          "text": "hard.",
+          "start": 2.08,
+          "end": 2.28
+        }
+      ]
+    },
+    {
+      "id": "T07",
+      "language": "Taglish",
+      "split": "heldout",
+      "transcript": "We need, parang, we need more time para rito.",
+      "annotations": [
+        {
+          "start": 9,
+          "end": 15,
+          "label": "filler",
+          "term": "parang"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "We",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "need,",
+          "start": 0.26,
+          "end": 0.46
+        },
+        {
+          "text": "parang,",
+          "start": 0.91,
+          "end": 1.11
+        },
+        {
+          "text": "we",
+          "start": 1.56,
+          "end": 1.76
+        },
+        {
+          "text": "need",
+          "start": 1.82,
+          "end": 2.02
+        },
+        {
+          "text": "more",
+          "start": 2.08,
+          "end": 2.28
+        },
+        {
+          "text": "time",
+          "start": 2.34,
+          "end": 2.54
+        },
+        {
+          "text": "para",
+          "start": 2.6,
+          "end": 2.8
+        },
+        {
+          "text": "rito.",
+          "start": 2.86,
+          "end": 3.06
+        }
+      ]
+    },
+    {
+      "id": "T08",
+      "language": "Taglish",
+      "split": "heldout",
+      "transcript": "Ang goal, you know, ang goal natin is confidence.",
+      "annotations": [
+        {
+          "start": 10,
+          "end": 18,
+          "label": "filler",
+          "term": "you know"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "Ang",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "goal,",
+          "start": 0.26,
+          "end": 0.46
+        },
+        {
+          "text": "you",
+          "start": 0.91,
+          "end": 1.11
+        },
+        {
+          "text": "know,",
+          "start": 1.17,
+          "end": 1.37
+        },
+        {
+          "text": "ang",
+          "start": 1.82,
+          "end": 2.02
+        },
+        {
+          "text": "goal",
+          "start": 2.08,
+          "end": 2.28
+        },
+        {
+          "text": "natin",
+          "start": 2.34,
+          "end": 2.54
+        },
+        {
+          "text": "is",
+          "start": 2.6,
+          "end": 2.8
+        },
+        {
+          "text": "confidence.",
+          "start": 2.86,
+          "end": 3.06
+        }
+      ]
+    },
+    {
+      "id": "T09",
+      "language": "Taglish",
+      "split": "heldout",
+      "transcript": "The word 'ano' means what sa English.",
+      "annotations": [
+        {
+          "start": 9,
+          "end": 14,
+          "label": "grammatical",
+          "term": "'ano'"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "The",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "word",
+          "start": 0.26,
+          "end": 0.46
+        },
+        {
+          "text": "'ano'",
+          "start": 0.91,
+          "end": 1.11
+        },
+        {
+          "text": "means",
+          "start": 1.56,
+          "end": 1.76
+        },
+        {
+          "text": "what",
+          "start": 1.82,
+          "end": 2.02
+        },
+        {
+          "text": "sa",
+          "start": 2.08,
+          "end": 2.28
+        },
+        {
+          "text": "English.",
+          "start": 2.34,
+          "end": 2.54
+        }
+      ]
+    },
+    {
+      "id": "T10",
+      "language": "Taglish",
+      "split": "heldout",
+      "transcript": "Please explain ano ang ibig mong sabihin.",
+      "annotations": [
+        {
+          "start": 15,
+          "end": 18,
+          "label": "grammatical",
+          "term": "ano"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "Please",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "explain",
+          "start": 0.26,
+          "end": 0.46
+        },
+        {
+          "text": "ano",
+          "start": 0.91,
+          "end": 1.11
+        },
+        {
+          "text": "ang",
+          "start": 1.56,
+          "end": 1.76
+        },
+        {
+          "text": "ibig",
+          "start": 1.82,
+          "end": 2.02
+        },
+        {
+          "text": "mong",
+          "start": 2.08,
+          "end": 2.28
+        },
+        {
+          "text": "sabihin.",
+          "start": 2.34,
+          "end": 2.54
+        }
+      ]
+    },
+    {
+      "id": "T11",
+      "language": "Taglish",
+      "split": "heldout",
+      "transcript": "We left so we could practice, di ba?",
+      "annotations": [
+        {
+          "start": 8,
+          "end": 10,
+          "label": "grammatical",
+          "term": "so"
+        },
+        {
+          "start": 30,
+          "end": 35,
+          "label": "grammatical",
+          "term": "di ba"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "We",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "left",
+          "start": 0.26,
+          "end": 0.46
+        },
+        {
+          "text": "so",
+          "start": 0.91,
+          "end": 1.11
+        },
+        {
+          "text": "we",
+          "start": 1.56,
+          "end": 1.76
+        },
+        {
+          "text": "could",
+          "start": 1.82,
+          "end": 2.02
+        },
+        {
+          "text": "practice,",
+          "start": 2.08,
+          "end": 2.28
+        },
+        {
+          "text": "di",
+          "start": 2.73,
+          "end": 2.93
+        },
+        {
+          "text": "ba?",
+          "start": 2.99,
+          "end": 3.19
+        }
+      ]
+    },
+    {
+      "id": "T12",
+      "language": "Taglish",
+      "split": "heldout",
+      "transcript": "I want to, ano, finish this today.",
+      "annotations": [
+        {
+          "start": 11,
+          "end": 14,
+          "label": "filler",
+          "term": "ano"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "I",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "want",
+          "start": 0.26,
+          "end": 0.46
+        },
+        {
+          "text": "to,",
+          "start": 0.52,
+          "end": 0.72
+        },
+        {
+          "text": "ano,",
+          "start": 1.17,
+          "end": 1.37
+        },
+        {
+          "text": "finish",
+          "start": 1.82,
+          "end": 2.02
+        },
+        {
+          "text": "this",
+          "start": 2.08,
+          "end": 2.28
+        },
+        {
+          "text": "today.",
+          "start": 2.34,
+          "end": 2.54
+        }
+      ]
+    },
+    {
+      "id": "T13",
+      "language": "Taglish",
+      "split": "heldout",
+      "transcript": "Maybe siguro we can start.",
+      "annotations": [
+        {
+          "start": 6,
+          "end": 12,
+          "label": "ambiguous",
+          "term": "siguro"
+        }
+      ],
+      "word_segments": [
+        {
+          "text": "Maybe",
+          "start": 0.0,
+          "end": 0.2
+        },
+        {
+          "text": "siguro",
+          "start": 0.65,
+          "end": 0.85
+        },
+        {
+          "text": "we",
+          "start": 1.3,
+          "end": 1.5
+        },
+        {
+          "text": "can",
+          "start": 1.56,
+          "end": 1.76
+        },
+        {
+          "text": "start.",
+          "start": 1.82,
+          "end": 2.02
+        }
+      ]
+    }
+  ]
+}

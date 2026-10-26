@@ -1,7 +1,8 @@
 """Offline contextual filler-word classification.
 
-Vocabulary recognition supplies review candidates only and never calls an
-API. Confirmed counts require a local token-classification model with
+Recovered vocabulary complements a local token classifier with conservative
+linguistic/timing rules. Ambiguous matches remain review candidates. No API is
+called. The local token-classification model defines
 ``FILLER`` and ``CONTEXT_WORD`` labels (``UNCERTAIN`` is optional).
 """
 
@@ -10,6 +11,7 @@ from __future__ import annotations
 import os
 from audio_analysis_processing_files.word_alignment import WORD, reconstruct_words, word_tokens
 from audio_analysis_processing_files.filler_vocabulary import VOCABULARY
+from audio_analysis_processing_files.filler_context import confirmation_reason, explicit_mention, valid_timing
 import threading
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Protocol
@@ -203,7 +205,8 @@ def _analyze_fillers(
 ) -> Dict[str, Any]:
     """Classify words from their full context using a local model.
 
-    Vocabulary alone never increases the count. Predictions below the
+    Vocabulary alone never increases the count. Complementary confirmations
+    require linguistic context and structurally valid timing. Predictions below the
     confidence threshold are returned as uncertain candidates and do not lower
     the filler score.
     """
@@ -236,8 +239,12 @@ def _analyze_fillers(
 
     fillers: List[Dict[str, Any]] = []
     uncertain: List[Dict[str, Any]] = []
-    seen_ranges = set()
-    for prediction in predictions:
+    occupied = []
+    # Confirmed model evidence takes precedence over duplicate uncertain output.
+    ordered = sorted(predictions, key=lambda p: not (
+        _normalize_label(p.get('entity_group', p.get('entity', p.get('label')))) == 'FILLER'
+        and round(float(p.get('score', 0.0)), 4) >= minimum_confidence))
+    for prediction in ordered:
         label = _normalize_label(
             prediction.get("entity_group", prediction.get("entity", prediction.get("label")))
         )
@@ -246,35 +253,37 @@ def _analyze_fillers(
         item = _classification_item(prediction, aligned_words, transcript)
         if item is None:
             continue
-        key = (item["start"], item["end"], item["word"].lower())
-        if key in seen_ranges:
+        start, end = int(prediction.get('start', 0)), int(prediction.get('end', 0))
+        if any(a < end and b > start for a, b in occupied):
             continue
-        seen_ranges.add(key)
-        if label == "FILLER" and item["confidence"] >= minimum_confidence:
+        occupied.append((start, end))
+        mention = explicit_mention(transcript, start, end)
+        if label == "FILLER" and item["confidence"] >= minimum_confidence and not mention:
             fillers.append(item)
         else:
-            item["reason"] = "local model prediction is uncertain"
+            item["reason"] = ('quoted or metalinguistic use; not confirmed as speaker hesitation'
+                              if mention else 'local model prediction is uncertain')
             uncertain.append(item)
 
-    # Surface vocabulary the classifier missed (including Filipino/Taglish),
-    # without converting recognition into classification or inventing confidence.
-    occupied = [(int(p.get('start', 0)), int(p.get('end', 0))) for p in predictions
-                if _normalize_label(p.get('entity_group', p.get('entity', p.get('label'))))
-                in {'FILLER', 'UNCERTAIN'}
-                and _classification_item(p, aligned_words, transcript) is not None]
+    # Keep model uncertainty intact; complementary rules apply only to uncovered
+    # vocabulary occurrences, never duplicate or promote low-confidence output.
+    timing_available = valid_timing(word_segments) and (
+        full_transcript is None or word_tokens(transcript) == word_tokens(full_transcript))
     for match in VOCABULARY.finditer(transcript):
         if any(start < match.end() and end > match.start() for start, end in occupied):
             continue
         words = _words_overlapping(aligned_words, match.start(), match.end())
         if not words:
             continue
-        uncertain.append({
+        reason = confirmation_reason(transcript, match, aligned_words, timing_available)
+        item = {
             'word': match.group(),
             'start': round(min(word['start'] for word in words), 3),
             'end': round(max(word['end'] for word in words), 3),
             'confidence': None,
-            'reason': 'transcript vocabulary match only; contextual filler use is unconfirmed',
-        })
+            'reason': reason or 'transcript vocabulary match only; contextual filler use is unconfirmed',
+        }
+        (fillers if reason else uncertain).append(item)
 
     fillers.sort(key=lambda item: item["start"])
     uncertain.sort(key=lambda item: item["start"])
@@ -296,7 +305,7 @@ def _analyze_fillers(
             "Moderate filler-word usage" if filler_rate < 15 else
             "High filler-word usage"
         ),
-        "method": "local contextual token-classification model",
+        "method": "local contextual token-classification model + evidence-gated bilingual vocabulary",
     }
 
 
